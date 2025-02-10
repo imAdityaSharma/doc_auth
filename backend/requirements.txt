@@ -1,0 +1,15 @@
+flask
+authlib
+werkzeug
+flask_cors
+flask_sqlalchemy
+psycopg2-binary
+flask_login
+click
+requests
+flask-login 
+flask-wtf 
+flask-bcrypt 
+flask-session
+Flask-Migrate
+pyjwt
