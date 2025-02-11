@@ -9,12 +9,15 @@ from flask_login import LoginManager, login_required, login_user, logout_user, c
 from database import db, create_app
 from Users import BaseUser
 from flask_migrate import Migrate
-import bcrypt
+
 import uuid
 import jwt
 from functools import wraps
-salt = bcrypt.gensalt()
+from flask_bcrypt import Bcrypt 
+
+
 app = create_app()
+bcrypt = Bcrypt(app) 
 
 CORS(app, supports_credentials=True,
      resources={
@@ -60,37 +63,17 @@ def register():
             primary_contact = data.get("primary_contact")
             aadhar_ssn = data.get("aadhar_ssn")
             
-            # Patient specific fields
-            # if role == "patient":
-            #     blood_group = data.get("blood_group")
-            #     height = data.get("height") 
-            #     weight = data.get("weight")
-            #     allergies = data.get("allergies")
-            #     current_medications = data.get("current_medications")
-            #     past_medications = data.get("past_medications")
-            #     chronic_conditions = data.get("chronic_conditions")
-            #     injuries = data.get("injuries")
-            #     surgeries = data.get("past_surgeries")
-                
-            #     # Add patient specific fields to new_user
-            #     new_user.blood_group = blood_group
-            #     new_user.height = height
-            #     new_user.weight = weight
-            #     new_user.allergies = allergies
-            #     new_user.current_medications = current_medications
-            #     new_user.past_medications = past_medications
-            #     new_user.chronic_conditions = chronic_conditions
-            #     new_user.injuries = injuries
-            #     new_user.past_surgeries = surgeries
-            
             # Print individual fields
-            # print("Parsed fields:", {
-            #     'role': role,
-            #     'first_name': first_name,
-            #     'last_name': last_name,
-            #     'email': email,
-            #     'password': password
-            # })
+            print("Parsed fields:", {
+                'role': role,
+                'first_name': first_name,
+                'last_name': last_name,
+                'email': email,
+                'password': password,
+                'date_of_birth': dob,
+                'primary_contact': primary_contact,
+                'aadhar_ssn': aadhar_ssn
+            })
             
             # Validate required fields
             if not all([role, first_name, last_name, email, password]):
@@ -111,20 +94,26 @@ def register():
                 return jsonify({"error": "User already exists"}), 409
 
             # Fix the password hashing
-            hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
+            hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
             
             new_user = BaseUser(
                 first_name=first_name,
                 last_name=last_name,
                 primary_email=email,
-                password_hash=hashed_password,  # This should now be proper bytes
-                role=role
+                password_hash=hashed_password,
+                role=role,
+                date_of_birth=dob,
+                primary_contact=primary_contact,
+                aadhar_ssn=aadhar_ssn
             )
             
             print("Attempting to add new user to database:", {
                 'email': new_user.primary_email,
                 'first_name': new_user.first_name,
-                'role': new_user.role
+                'role': new_user.role,
+                'date_of_birth': new_user.date_of_birth,
+                'primary_contact': new_user.primary_contact,
+                'aadhar_ssn': new_user.aadhar_ssn
             })
             
             try:
@@ -154,7 +143,7 @@ def login():
         data = request.get_json()
         email = data.get("email")
         password = data.get("password")
-        password = bcrypt.hashpw(password.encode('utf-8'), salt)
+         
         if not email or not password:
             return jsonify({"error": "Email and password are required"}), 400
 
@@ -163,14 +152,7 @@ def login():
         print("Hashed password:", password)
         print("Password:", user.password_hash)
         
-        # Add debug prints to see what we're comparing
-        # if user:
-        #     print("Login password:", password)
-        #     print("Stored hash from DB:", user.password_hash)
-        #     print("New hash of login password:", bcrypt.hashpw(password.encode('utf-8'), user.password_hash))
-        #     print("Password verification result:", bcrypt.checkpw(password.encode('utf-8'), user.password_hash))
-
-        if not user or not password == user.password_hash:
+        if not user or not bcrypt.check_password_hash(user.password_hash, password):
             return jsonify({"error": "Invalid credentials"}), 401
 
         # Create JWT token with user info
@@ -178,7 +160,7 @@ def login():
             'user_id': user.id,
             'email': user.primary_email,
             'role': user.role,
-            'exp': datetime.utcnow() + timedelta(days=1)  # Use UTC time for expiration
+            'exp': datetime.now(datetime.UTC) + timedelta(days=1)  # Using timezone-aware UTC
         }
         token = jwt.encode(token_data, str(app.config['SECRET_KEY']), algorithm='HS256')
 
