@@ -4,16 +4,18 @@ from flask_cors import CORS
 from werkzeug.urls import quote
 import os
 from authlib.integrations.flask_client import OAuth
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask_login import LoginManager, login_required, login_user, logout_user, current_user
 from database import db, create_app
 from Users import BaseUser
 from flask_migrate import Migrate
-
+from decorators import token_required
 import uuid
 import jwt
 from functools import wraps
 from flask_bcrypt import Bcrypt 
+from routes.doctorapis import doctor_bp
+from routes.patientapis import patient_bp
 
 
 app = create_app()
@@ -33,7 +35,8 @@ CORS(app, supports_credentials=True,
 app.config['SECRET_KEY'] = '987qwert65fyhh'
 
 # oauth = OAuth(app)    
-
+app.register_blueprint(doctor_bp, url_prefix='/doc')
+app.register_blueprint(patient_bp, url_prefix='/puser')
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -45,7 +48,7 @@ def load_user(user_id):
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
-    if request.method == "POST":
+    if request.method == "POST":    
         try:
             data = request.get_json()
             if not data:
@@ -149,10 +152,10 @@ def login():
 
         # Query the user
         user = BaseUser.query.filter_by(primary_email=email).first()
-        print("Hashed password:", password)
-        print("Password:", user.password_hash)
         
-        if not user or not bcrypt.check_password_hash(user.password_hash, password):
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        elif not bcrypt.check_password_hash(user.password_hash, password):
             return jsonify({"error": "Invalid credentials"}), 401
 
         # Create JWT token with user info
@@ -160,7 +163,7 @@ def login():
             'user_id': user.id,
             'email': user.primary_email,
             'role': user.role,
-            'exp': datetime.now(datetime.UTC) + timedelta(days=1)  # Using timezone-aware UTC
+            'exp': datetime.now(timezone.utc) + timedelta(days=1)  # Using timezone.utc instead of datetime.UTC
         }
         token = jwt.encode(token_data, str(app.config['SECRET_KEY']), algorithm='HS256')
 
@@ -202,102 +205,6 @@ def logout():
     return response, 200
 
 
-@app.route("/duser/dashboard")
-@app.route("/parauser/dashboard")
-@login_required
-def dashboard():
-    user_data = {
-        "id": current_user.id,
-        "first_name": current_user.first_name,
-        "last_name": current_user.last_name,
-        "date_of_birth": current_user.date_of_birth.strftime('%Y-%m-%d') if current_user.date_of_birth else None,
-        "house_no": current_user.house_no,
-        "apartment": current_user.apartment,
-        "colony": current_user.colony,
-        "city": current_user.city,
-        "pin_code": current_user.pin_code,
-        "state": current_user.state,
-        "primary_contact": current_user.primary_contact,
-        "recovery_contact": current_user.recovery_contact,
-        "primary_email": current_user.primary_email,
-        "recovery_email": current_user.recovery_email,
-        "aadhar_ssn": current_user.aadhar_ssn,
-        "profile_pic": current_user.profile_pic,
-        "role": current_user.role
-    }
-
-    # Add patient-specific data if user is a patient
-    if current_user.role == 'patient':
-        user_data.update({
-            "allergies": current_user.allergies,
-            "chronic_conditions": current_user.chronic_conditions,
-            "medications": current_user.medications,
-            "past_surgeries": current_user.past_surgeries,
-            "medical_docs": current_user.medical_docs,
-            "weight": current_user.weight,
-            "height": current_user.height,
-            "blood_pressure": current_user.blood_pressure,
-            "blood_glucose": current_user.blood_glucose,
-            "additional_metrics": current_user.additional_metrics
-        })
-
-    return jsonify(user_data), 200
-
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = None
-        if 'Authorization' in request.headers:
-            token = request.headers['Authorization'].split(" ")[1]
-        
-        if not token:
-            return jsonify({'error': 'Token is missing'}), 401
-
-        try:
-            data = jwt.decode(token, str(app.config['SECRET_KEY']), algorithms=["HS256"])
-            current_user = BaseUser.query.get(data['user_id'])
-            if not current_user:
-                return jsonify({'error': 'Invalid token'}), 401
-        except jwt.ExpiredSignatureError:
-            return jsonify({'error': 'Token has expired'}), 401
-        except jwt.InvalidTokenError:
-            return jsonify({'error': 'Invalid token'}), 401
-        
-        return f(*args, **kwargs)
-    return decorated
-
-@app.route('/puser/dashboard', methods=['GET'])
-@token_required
-def get_patient_dashboard():
-    try:
-        # Get token data
-        token = request.headers['Authorization'].split(" ")[1]
-        data = jwt.decode(token, str(app.config['SECRET_KEY']), algorithms=["HS256"])
-        current_user = BaseUser.query.get(data['user_id'])
-
-        if not current_user:
-            return jsonify({"error": "User not found"}), 404
-
-        patient_data = {
-            "name": f"{current_user.first_name} {current_user.last_name}",
-            "email": current_user.primary_email,
-            "role": current_user.role,
-            "upcomingAppointments": [],  # TODO: Query appointments table
-            "recentPrescriptions": []  # TODO: Query prescriptions table
-        }
-        
-        response = jsonify(patient_data)
-        response.headers.add('Access-Control-Allow-Origin', 'http://127.0.0.1:3000')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        return response, 200
-        
-    except Exception as e:
-        print(f"Dashboard error: {str(e)}")
-        return jsonify({"error": "Failed to fetch dashboard data"}), 500
-
-# @app.route("/api/messages", methods=["GET"])
-# def func():
-#     return jsonify({"message": "This is a beckend message!"})
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)

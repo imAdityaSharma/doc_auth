@@ -7,6 +7,7 @@ import Home from "./components/Home";
 import LoginForm from './components/LoginForm'
 import RegistrationForm from './components/Registration/RegistrationForm'
 import PatientDashboard from './components/patientfrontend/patientDashboard'
+import DocDashboard from './components/docFrontend/docdashboard'
 function App() {
   return (   
       <BrowserRouter>
@@ -16,8 +17,7 @@ function App() {
             <Route path="/login" element={<LoginForm />} />
             <Route path="/register" element={<RegistrationForm />} />
             <Route path="/puser/dashboard" element={<PatientDashboard />} />
-            {/* <Route path="/duser/dashboard" element={<DoctorDashboard />} />
-            <Route path="/parauser/dashboard" element={<ParamedicDashboard />} /> */}
+            <Route path="/doc/docDashboard" element={<DocDashboard />} />
 
         </Routes>
       </BrowserRouter>

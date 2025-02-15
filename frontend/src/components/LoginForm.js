@@ -37,9 +37,9 @@ export default function LoginPage(){
                     if (response.data.role === 'patient') {
                         navigate('/puser/dashboard');
                     } else if (response.data.role === 'doctor') {
-                        navigate('/duser/dashboard');
+                        navigate('/doc/docDashboard');
                     } else if (response.data.role === 'paramedic') {
-                        navigate('/parauser/dashboard');
+                        navigate('/para/paradashboard');
                     }
                 }
             })
