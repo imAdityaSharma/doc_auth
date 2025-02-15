@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-
+import './patientuser.css';
 export default function PatientDashboard() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const navigate = useNavigate();
@@ -156,125 +156,6 @@ export default function PatientDashboard() {
       <footer className="dashboard-footer">
         <p>&copy; 2024 Healthcare Portal. All rights reserved.</p>
       </footer>
-
-      <style jsx>{`
-        .dashboard-container {
-          min-height: 100vh;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .dashboard-header {
-          background: #fff;
-          padding: 1rem 2rem;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .profile-section {
-          position: relative;
-        }
-
-        .profile-button {
-          background: none;
-          border: none;
-          cursor: pointer;
-        }
-
-        .profile-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-        }
-
-        .profile-menu {
-          position: absolute;
-          right: 0;
-          top: 100%;
-          background: white;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-          z-index: 1000;
-        }
-
-        .profile-menu button {
-          display: block;
-          width: 100%;
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          text-align: left;
-          cursor: pointer;
-        }
-
-        .profile-menu button:hover {
-          background: #f5f5f5;
-        }
-
-        .dashboard-content {
-          flex: 1;
-          padding: 2rem;
-          background: #f5f7fa;
-        }
-
-        .welcome-section {
-          margin-bottom: 2rem;
-        }
-
-        .dashboard-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          gap: 2rem;
-        }
-
-        .dashboard-card {
-          background: white;
-          border-radius: 8px;
-          padding: 1.5rem;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .appointment-item, .prescription-item {
-          border-bottom: 1px solid #eee;
-          padding: 1rem 0;
-        }
-
-        .metrics-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-          gap: 1rem;
-        }
-
-        .metric-item {
-          text-align: center;
-          padding: 1rem;
-          background: #f8f9fa;
-          border-radius: 4px;
-        }
-
-        .metric-label {
-          display: block;
-          color: #666;
-          margin-bottom: 0.5rem;
-        }
-
-        .metric-value {
-          font-size: 1.25rem;
-          font-weight: bold;
-          color: #333;
-        }
-
-        .dashboard-footer {
-          background: #333;
-          color: white;
-          text-align: center;
-          padding: 1rem;
-          margin-top: auto;
-        }
-      `}</style>
     </div>
   );
 }

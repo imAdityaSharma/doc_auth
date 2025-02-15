@@ -8,6 +8,7 @@ import LoginForm from './components/LoginForm'
 import RegistrationForm from './components/Registration/RegistrationForm'
 import PatientDashboard from './components/patientfrontend/patientDashboard'
 import DocDashboard from './components/docFrontend/docdashboard'
+import ParaDashboard from './components/paraFrontend/paraDashboard'
 function App() {
   return (   
       <BrowserRouter>
@@ -18,7 +19,7 @@ function App() {
             <Route path="/register" element={<RegistrationForm />} />
             <Route path="/puser/dashboard" element={<PatientDashboard />} />
             <Route path="/doc/docDashboard" element={<DocDashboard />} />
-
+            <Route path="/para/paraDashboard" element={<ParaDashboard />} />
         </Routes>
       </BrowserRouter>
   );

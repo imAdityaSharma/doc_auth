@@ -20,7 +20,7 @@ const DocDashboard = () => {
 
                 console.log('Fetching with token:', token); // Debug log
 
-                const response = await axios.get('http://localhost:5000/doc/docDashboard', {
+                const response = await axios.get('http://localhost:5000/para/paraDashboard', {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
@@ -83,7 +83,7 @@ const DocDashboard = () => {
             {/* Header */}
             <header className="dashboard-header">
         <div className="header-left">
-          <h1>Doctor Dashboard</h1>
+          <h1>Paramedic Dashboard</h1>
         </div>
         <div className="header-right">
           <div className="profile-section">

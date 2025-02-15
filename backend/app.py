@@ -16,6 +16,7 @@ from functools import wraps
 from flask_bcrypt import Bcrypt 
 from routes.doctorapis import doctor_bp
 from routes.patientapis import patient_bp
+from routes.paraApis import para_bp
 
 
 app = create_app()
@@ -35,16 +36,22 @@ CORS(app, supports_credentials=True,
 app.config['SECRET_KEY'] = '987qwert65fyhh'
 
 # oauth = OAuth(app)    
+
 app.register_blueprint(doctor_bp, url_prefix='/doc')
 app.register_blueprint(patient_bp, url_prefix='/puser')
+app.register_blueprint(para_bp, url_prefix='/para')
+
+
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
+
 @login_manager.user_loader
 def load_user(user_id):
     return BaseUser.query.get(int(user_id))
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
