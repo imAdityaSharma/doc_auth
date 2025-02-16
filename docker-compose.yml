@@ -1,4 +1,4 @@
-# Docker Compose configuration for Flask (backend), React (frontend), and PostgreSQL (database)
+# Docker Compose configuration for Python3.13 Flask, React, Postgres services
 
 services:
   db:

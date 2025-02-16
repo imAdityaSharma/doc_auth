@@ -667,7 +667,7 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="form-group">
-                  <label>Paramedic License Number *</label>
+                  <label>aadhar/ssn *</label>
                   <input
                     type="text"
                     name="aadhar_ssn"
