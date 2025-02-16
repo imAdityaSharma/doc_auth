@@ -1,8 +1,11 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import generate_password_hash
 from database  import db
-
+import pyotp  # For 2FA
+from datetime import datetime, timedelta, timezone
+import json
+import secrets
 
 
 
@@ -38,23 +41,147 @@ class BaseUser(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(50), nullable=False)  # "patient", "doctor", "paramedic"
 
+    # 2FA Fields
+    two_factor_enabled = db.Column(db.Boolean, default=False)
+    two_factor_secret = db.Column(db.String(32))  # For storing TOTP secret
+    backup_codes = db.Column(db.Text)  # JSON list of backup codes
+    preferred_2fa_method = db.Column(db.String(20))  # 'app', 'sms', or 'email'
+    
+    # Verification Fields
+    email_verified = db.Column(db.Boolean, default=False)
+    email_verification_token = db.Column(db.String(100))
+    email_verification_sent_at = db.Column(db.DateTime)
+    
+    phone_verified = db.Column(db.Boolean, default=False)
+    phone_verification_code = db.Column(db.String(6))
+    phone_verification_sent_at = db.Column(db.DateTime)
+    
+    # Account Security
+    failed_login_attempts = db.Column(db.Integer, default=0)
+    last_failed_login = db.Column(db.DateTime)
+    account_locked_until = db.Column(db.DateTime)
+    password_changed_at = db.Column(db.DateTime)
+
+    def __init__(self, **kwargs):
+        super(BaseUser, self).__init__(**kwargs)
+        if not self.two_factor_secret:
+            self.two_factor_secret = pyotp.random_base32()
+
     def set_password(self, password):
         """Hashes and stores the password securely."""
         self.password_hash = generate_password_hash(password)
 
-    def check_password(self, password):
-        """Verifies the password."""
-        return check_password_hash(self.password_hash, password)
 
     __mapper_args__ = {
         'polymorphic_identity': 'base_user',
         'polymorphic_on': role
     }
 
+    # 2FA Methods
+    # def enable_2fa(self):
+    #     """Enable 2FA for the user"""
+    #     self.two_factor_enabled = True
+    #     self.generate_backup_codes()
+    #     db.session.commit()
+
+    # def disable_2fa(self):
+    #     """Disable 2FA for the user"""
+    #     self.two_factor_enabled = False
+    #     self.two_factor_secret = pyotp.random_base32()  # Generate new secret
+    #     self.backup_codes = None
+    #     db.session.commit()
+
+    # def verify_totp(self, token):
+    #     """Verify a TOTP token"""
+    #     totp = pyotp.TOTP(self.two_factor_secret)
+    #     return totp.verify(token)
+
+    # def generate_backup_codes(self, count=8):
+    #     """Generate new backup codes"""
+    #     import secrets
+    #     codes = [secrets.token_hex(4) for _ in range(count)]
+    #     self.backup_codes = json.dumps(codes)
+    #     return codes
+
+    # Email Verification Methods
+    def generate_email_verification_token(self):
+        """Generate a new email verification token"""
+        
+        self.email_verification_token = secrets.token_urlsafe(32)
+        self.email_verification_sent_at = datetime.utcnow()
+        db.session.commit()
+        return self.email_verification_token
+
+    def verify_email(self, token):
+        """Verify email with token"""
+        if token == self.email_verification_token:
+            if self.email_verification_sent_at + timedelta(hours=24) > datetime.utcnow():
+                self.email_verified = True
+                self.email_verification_token = None
+                db.session.commit()
+                return True
+        return False
+
+    # Phone Verification Methods
+    # def generate_phone_verification_code(self):
+    #     """Generate a new phone verification code"""
+    #     import random
+    #     self.phone_verification_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+    #     self.phone_verification_sent_at = datetime.utcnow()
+    #     db.session.commit()
+    #     return self.phone_verification_code
+
+    # def verify_phone(self, code):
+    #     """Verify phone with code"""
+    #     if code == self.phone_verification_code:
+    #         if self.phone_verification_sent_at + timedelta(minutes=10) > datetime.utcnow():
+    #             self.phone_verified = True
+    #             self.phone_verification_code = None
+    #             db.session.commit()
+    #             return True
+    #     return False
+
+    # Account Security Methods
+    def record_failed_login(self):
+        """Record a failed login attempt"""
+        self.failed_login_attempts += 1
+        self.last_failed_login = datetime.now(timezone.utc)
+        
+        # Lock account after 5 failed attempts
+        if self.failed_login_attempts >= 5:
+            self.account_locked_until = datetime.now(timezone.utc) + timedelta(minutes=30)
+        
+        db.session.commit()
+
+    def reset_failed_login_attempts(self):
+        """Reset failed login attempts after successful login"""
+        self.failed_login_attempts = 0
+        self.last_failed_login = None
+        self.account_locked_until = None
+        db.session.commit()
+
+    def is_account_locked(self):
+        """Check if account is locked"""
+        if self.account_locked_until:
+            if self.account_locked_until > datetime.now(timezone.utc):
+                return True
+            # Reset lock if time has passed
+            self.account_locked_until = None
+            db.session.commit()
+        return False
+
+    # Password Management
+    def change_password(self, new_password):
+        """Change user password and record the time"""
+        from app import bcrypt_var
+        self.password_hash = bcrypt_var.generate_password_hash(new_password).decode('utf-8')
+        self.password_changed_at = datetime.now(timezone.utc)
+        db.session.commit()
+
 # --- Patient Model ---
 class Patient(BaseUser):
     __tablename__ = "patients"
-    
+        
     id = db.Column(db.Integer, db.ForeignKey("base_users.id"), primary_key=True)
     
     # Medical History
@@ -130,47 +257,47 @@ class Paramedic(BaseUser):
 
 
 # --- Admin Model ---
-class Admin(BaseUser):
-    __tablename__ = "admins"
+# class Admin(BaseUser):
+#     __tablename__ = "admins"
     
-    id = db.Column(db.Integer, db.ForeignKey("base_users.id"), primary_key=True)
+#     id = db.Column(db.Integer, db.ForeignKey("base_users.id"), primary_key=True)
 
-    __mapper_args__ = {
-        'polymorphic_identity': 'admin'
-    }
+#     __mapper_args__ = {
+#         'polymorphic_identity': 'admin'
+#     }
 
-    def __init__(self, **kwargs):
-        super(Admin, self).__init__(**kwargs)
-        self.role = 'admin'
+#     def __init__(self, **kwargs):
+#         super(Admin, self).__init__(**kwargs)
+#         self.role = 'admin'
 
-    @staticmethod
-    def create_superadmin(email, password):
-        """Creates a superadmin user"""
-        admin = Admin(
-            first_name='Super',
-            last_name='Admin', 
-            primary_email=email,
-            role='admin'
-        )
-        admin.set_password(password)
-        return admin
+#     @staticmethod
+#     def create_superadmin(email, password):
+#         """Creates a superadmin user"""
+#         admin = Admin(
+#             first_name='Super',
+#             last_name='Admin', 
+#             primary_email=email,
+#             role='admin'
+#         )
+#         admin.set_password(password)
+#         return admin
 
-    def get_all_users(self):
-        """Get all users regardless of role"""
-        return BaseUser.query.all()
+#     def get_all_users(self):
+#         """Get all users regardless of role"""
+#         return BaseUser.query.all()
 
-    def get_all_patients(self):
-        """Get all patient records"""
-        return BaseUser.query.filter_by(role='patient').all()
+#     def get_all_patients(self):
+#         """Get all patient records"""
+#         return BaseUser.query.filter_by(role='patient').all()
 
-    def get_all_doctors(self):
-        """Get all doctor records"""
-        return BaseUser.query.filter_by(role='doctor').all()
+#     def get_all_doctors(self):
+#         """Get all doctor records"""
+#         return BaseUser.query.filter_by(role='doctor').all()
         
-    def get_all_paramedics(self):
-        """Get all paramedic records"""
-        return BaseUser.query.filter_by(role='paramedic').all()
+#     def get_all_paramedics(self):
+#         """Get all paramedic records"""
+#         return BaseUser.query.filter_by(role='paramedic').all()
 
-    def get_user_details(self, user_id):
-        """Get detailed information for any user"""
-        return BaseUser.query.get(user_id)
+#     def get_user_details(self, user_id):
+#         """Get detailed information for any user"""
+#         return BaseUser.query.get(user_id)

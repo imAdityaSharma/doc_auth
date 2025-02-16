@@ -13,3 +13,6 @@ flask-bcrypt
 flask-session
 Flask-Migrate
 pyjwt
+pyotp
+phonenumbers
+secrets

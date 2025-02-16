@@ -20,7 +20,7 @@ from routes.paraApis import para_bp
 
 
 app = create_app()
-bcrypt = Bcrypt(app) 
+bcrypt_var = Bcrypt(app) 
 
 CORS(app, supports_credentials=True,
      resources={
@@ -104,7 +104,7 @@ def register():
                 return jsonify({"error": "User already exists"}), 409
 
             # Fix the password hashing
-            hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+            hashed_password = bcrypt_var.generate_password_hash(password).decode('utf-8')
             
             new_user = BaseUser(
                 first_name=first_name,
@@ -162,7 +162,7 @@ def login():
         
         if not user:
             return jsonify({"error": "User not found"}), 404
-        elif not bcrypt.check_password_hash(user.password_hash, password):
+        elif not bcrypt_var.check_password_hash(user.password_hash, password):
             return jsonify({"error": "Invalid credentials"}), 401
 
         # Create JWT token with user info
