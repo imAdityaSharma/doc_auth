@@ -16,8 +16,8 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
-    migrate = Migrate(app, db)
-    # Import models here to avoid circular imports
+    migrate = Migrate(app, db) # Initialize Flask-Migrate for updating database schema
+
     with app.app_context():
         from Users import BaseUser  # Ensure models are imported after db is initialized
         db.create_all()
@@ -26,7 +26,7 @@ def create_app():
 
 def init_db():
     """Create database tables."""
-    from users import BaseUser  # Import models only when needed
+    from Users import BaseUser 
     with create_app().app_context():
         db.create_all()
 

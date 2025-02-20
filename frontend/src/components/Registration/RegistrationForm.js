@@ -3,6 +3,10 @@ import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./register.css";
 
+// Add axios default configuration
+axios.defaults.withCredentials = true;
+axios.defaults.headers.common['Access-Control-Allow-Credentials'] = true;
+
 export default function RegisterPage() {
   const location = useLocation();
   const role = location.state?.role || 'patient';
@@ -16,14 +20,6 @@ export default function RegisterPage() {
     password: "",
     confirm_password: "",
     aadhar_ssn: "",
-    weight: "",
-    height: "",
-    blood_pressure: "",
-    blood_glucose: "",
-    allergies: "",
-    chronic_conditions: "",
-    medications: "",
-    past_surgeries: "",
     role: role,
   });
 
@@ -67,6 +63,127 @@ export default function RegisterPage() {
 
   const prevStep = () => {
     setCurrentStep(currentStep - 1);
+  };
+
+  const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
+
+  const handleOTPChange = (index, value) => {
+    if (value.length > 1) return;
+    if (!/^[0-9a-fA-F]$/.test(value) && value !== '') return;
+
+    const newVerificationCode = [...verificationCode];
+    newVerificationCode[index] = value;
+    setVerificationCode(newVerificationCode);
+
+    if (value !== '' && index < 5) {
+      const nextInput = document.getElementById(`otp-${index + 1}`);
+      if (nextInput) nextInput.focus();
+    }
+  };
+
+  const handleKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !verificationCode[index] && index > 0) {
+      const prevInput = document.getElementById(`otp-${index - 1}`);
+      if (prevInput) prevInput.focus();
+    }
+  };
+
+  const verifyCode = async () => {
+    try {
+      const code = verificationCode.join('');
+      console.log('Sending verification request with:', {
+        email: formData.primary_email,
+        code: code
+      });
+
+      const response = await axios.post(
+        'http://localhost:5000/verify-email',
+        {
+          email: formData.primary_email,
+          code: code
+        },
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log('Verification response:', response.data);
+
+      if (response.data.success) {
+        setVerificationStatus({
+          isVerifying: false,
+          verified: true,
+          error: null
+        });
+        setFormData({
+          ...formData,
+          email_verified: true
+        });
+        alert('Email verified successfully!');
+      }
+    } catch (error) {
+      console.error('Verification error:', error.response?.data);
+      setVerificationStatus({
+        isVerifying: false,
+        verified: false,
+        error: error.response?.data?.error || 'Failed to verify code'
+      });
+      alert(error.response?.data?.error || 'Failed to verify code');
+    }
+  };
+
+  const [verificationStatus, setVerificationStatus] = useState({
+    isVerifying: false,
+    verificationSent: false,
+    verified: false,
+    error: null
+  });
+
+  const sendVerificationCode = async () => {
+    try {
+      setVerificationStatus({
+        isVerifying: true,
+        verificationSent: false,
+        verified: false,
+        error: null
+      });
+
+      const response = await axios.post(
+        'http://localhost:5000/send-verification',
+        { email: formData.primary_email },
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Credentials': 'true'
+          }
+        }
+      );
+
+      console.log('Verification response:', response);
+
+      if (response.data.success) {
+        setVerificationStatus({
+          isVerifying: false,
+          verificationSent: true,
+          verified: false,
+          error: null
+        });
+        alert('Verification code sent! Please check your email.');
+      }
+    } catch (error) {
+      console.error('Error sending verification code:', error);
+      setVerificationStatus({
+        isVerifying: false,
+        verificationSent: false,
+        verified: false,
+        error: error.response?.data?.error || 'Failed to send verification code'
+      });
+      alert(error.response?.data?.error || 'Failed to send verification code');
+    }
   };
 
   return role === 'patient' ? (
@@ -131,13 +248,84 @@ export default function RegisterPage() {
 
                   <div className="form-group">
                     <label>Email Address *</label>
-                    <input
-                      type="email"
-                      name="primary_email"
-                      value={formData.primary_email}
-                      onChange={handleChange}
-                      required
-                    />
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <input
+                          type="email"
+                          name="primary_email"
+                          value={formData.primary_email}
+                          onChange={handleChange}
+                          required
+                        />
+                        <button 
+                          type="button"
+                          onClick={sendVerificationCode}
+                          disabled={!formData.primary_email || verificationStatus.isVerifying}
+                          style={{ marginTop: '5px' }}
+                        >
+                          {verificationStatus.isVerifying ? 'Sending...' : 'Get Verification Code'}
+                        </button>
+                      </div>
+                      {verificationStatus.verificationSent && (
+                        <div style={{ flex: 1 }}>
+                          <div className="form-group">
+                            <label>Verification Code *</label>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                                {[0, 1, 2, 3, 4, 5].map((index) => (
+                                  <input
+                                    key={index}
+                                    id={`otp-${index}`}
+                                    type="text"
+                                    value={verificationCode[index]}
+                                    onChange={(e) => handleOTPChange(index, e.target.value)}
+                                    onKeyDown={(e) => handleKeyDown(index, e)}
+                                    maxLength={1}
+                                    style={{
+                                      width: '40px',
+                                      height: '40px',
+                                      textAlign: 'center',
+                                      fontSize: '1.2em',
+                                      border: '1px solid #ccc',
+                                      borderRadius: '4px',
+                                      margin: '0 4px'
+                                    }}
+                                    disabled={verificationStatus.verified}
+                                  />
+                                ))}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={verifyCode}
+                                disabled={verificationCode.some(digit => digit === '') || verificationStatus.isVerifying || verificationStatus.verified}
+                                style={{
+                                  padding: '8px 16px',
+                                  backgroundColor: verificationStatus.verified ? '#4CAF50' : '#007bff',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  marginTop: '10px'
+                                }}
+                              >
+                                {verificationStatus.isVerifying ? 'Verifying...' : 
+                                 verificationStatus.verified ? 'Verified ✓' : 'Verify Code'}
+                              </button>
+                              {verificationStatus.error && (
+                                <div style={{ color: 'red', fontSize: '0.8em', marginTop: '5px' }}>
+                                  {verificationStatus.error}
+                                </div>
+                              )}
+                              {verificationStatus.verified && (
+                                <div style={{ color: 'green', fontSize: '0.8em', marginTop: '5px' }}>
+                                  Email verified successfully!
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="form-row">
@@ -571,6 +759,12 @@ export default function RegisterPage() {
         .login-link a {
           color: #007bff;
           text-decoration: none;
+        }
+
+        input:focus {
+          outline: none;
+          border-color: #007bff;
+          box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
         }
       `}</style>
     </div>

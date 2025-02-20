@@ -1,146 +1,282 @@
 from flask import Flask, jsonify, request, session
-from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from werkzeug.urls import quote
-import os
-from authlib.integrations.flask_client import OAuth
+# from authlib.integrations.flask_client import OAuth
 from datetime import datetime, timedelta, timezone
-from flask_login import LoginManager, login_required, login_user, logout_user, current_user
+from flask_login import LoginManager, login_user
 from database import db, create_app
 from Users import BaseUser
-from flask_migrate import Migrate
-from decorators import token_required
-import uuid
 import jwt
-from functools import wraps
 from flask_bcrypt import Bcrypt 
 from routes.doctorapis import doctor_bp
 from routes.patientapis import patient_bp
 from routes.paraApis import para_bp
-
+from utils.EmailServer import EmailServer
+import secrets
+from flask_session import Session  # Add this import
+import redis
+import os
+import json
 
 app = create_app()
 bcrypt_var = Bcrypt(app) 
 
-CORS(app, supports_credentials=True,
+# Configure Redis
+redis_url = os.getenv('REDIS_URL', 'redis://redis:6379')
+app.config.update(
+    SESSION_TYPE='redis',
+    SESSION_REDIS=redis.from_url(redis_url),
+    SECRET_KEY='987qwert65fyhh',
+    SESSION_PERMANENT=True,
+    PERMANENT_SESSION_LIFETIME=timedelta(minutes=30),
+    SESSION_COOKIE_SECURE=False,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax'
+)
+
+# Initialize Flask-Session
+Session(app)
+# Define allowed origins
+ALLOWED_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
+# Configure CORS
+CORS(app, 
      resources={
          r"/*": {
-             "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+             "origins": ALLOWED_ORIGINS,
              "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-             "allow_headers": ["Content-Type", "Authorization", "Access-Control-Allow-Credentials", "Access-Control-Allow-Origin"],
-             "expose_headers": ["Access-Control-Allow-Origin"],
-             "supports_credentials": True
+             "allow_headers": ["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
+             "supports_credentials": True,
+             "max_age": 120
          }
-     })  # Allow React frontend
+     })
 
-app.config['SECRET_KEY'] = '987qwert65fyhh'
-
-# oauth = OAuth(app)    
+# Add CORS headers to all responses
+@app.after_request
+def after_request(response):
+    origin = request.headers.get('Origin')
+    if origin in ALLOWED_ORIGINS:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials'
+    return response
+# Store verification codes in Redis directly
+redis_client = redis.from_url(redis_url)
 
 app.register_blueprint(doctor_bp, url_prefix='/doc')
 app.register_blueprint(patient_bp, url_prefix='/puser')
 app.register_blueprint(para_bp, url_prefix='/para')
 
-
-
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
+email_server = EmailServer()
 
 @login_manager.user_loader
 def load_user(user_id):
     return BaseUser.query.get(int(user_id))
 
 
-@app.route("/register", methods=["GET", "POST"])
+@app.route("/send-verification", methods=["POST", "OPTIONS"])
+def send_verification():
+    # Handle preflight request
+    if request.method == "OPTIONS":
+        response = jsonify({"success": True})
+        origin = request.headers.get('Origin')
+        if origin in ALLOWED_ORIGINS:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials'
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            response.headers['Access-Control-Max-Age'] = '120'
+        return response, 200
+        
+    try:
+        data = request.get_json()
+        email = data.get('email')        
+        if not email:
+            return jsonify({"error": "Email is required"}), 400
+            
+        # Check if email already exists
+        existing_user = BaseUser.query.filter_by(primary_email=email).first()
+        if existing_user:
+            return jsonify({"error": "Email already registered"}), 409
+            
+        # Generate verification token
+        verification_token = secrets.token_hex(3)  # 6-digit hex code
+        
+        # Store verification data in Redis with expiration
+        verification_data = {
+            'email': email,
+            'token': verification_token,
+            'expires': (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat()
+        }
+        # Use email as key in Redis
+        redis_key = f"verification:{email}"
+        redis_client.setex( redis_key, timedelta(minutes=30), json.dumps(verification_data))
+
+        # Send verification email
+        if email_server.send_verification_email(email, verification_token):
+            return jsonify({
+                "success": True,
+                "message": "Verification code sent successfully",
+                "email": email
+            }), 200
+        else:
+            return jsonify({"error": "Failed to send verification email"}), 500
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/verify-email", methods=["POST"])
+def verify_email():
+    try:    
+        data = request.get_json()
+        email = data.get('email')
+        code = data.get('code')
+        
+        if not email or not code:
+            return jsonify({
+                "success": False,
+                "error": "Email and verification code are required"
+            }), 400
+            
+        # Get verification data from Redis
+        redis_key = f"verification:{email}"
+        verification_data = redis_client.get(redis_key)
+        
+        if not verification_data:
+            return jsonify({
+                "success": False,
+                "error": "No verification in progress. Please request a new code."
+            }), 400
+            
+        verification = json.loads(verification_data)
+        
+        
+        # Check expiration
+        expiry_time = datetime.fromisoformat(verification['expires'].replace('Z', '+00:00'))
+        if datetime.now(timezone.utc) > expiry_time:
+            redis_client.delete(redis_key)
+            return jsonify({
+                "success": False,
+                "error": "Verification code has expired. Please request a new code."
+            }), 400
+            
+        # Compare codes
+        if verification['token'] != code:
+            return jsonify({
+                "success": False,
+                "error": "Invalid verification code. Please try again."
+            }), 400
+            
+        # Mark email as verified in Redis
+        redis_client.setex( f"verified:{email}", timedelta(minutes=30), "true")
+        
+        return jsonify({
+            "success": True,
+            "message": "Email verified successfully",
+            "email": email
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": "Failed to verify email",
+            "details": str(e)
+        }), 500
+
+@app.route("/register", methods=["POST"])
 def register():
     if request.method == "POST":    
         try:
+            
             data = request.get_json()
+
             if not data:
-                return jsonify({"error": "Invalid request"}), 400
+                return jsonify({"error": "Invalid request data"}), 400
             
-            # Print raw data to see exact structure
-            print("Raw registration data:", data)
+            # Extract and validate all required fields
+            required_fields = [
+                'first_name', 
+                'last_name', 
+                'primary_email', 
+                'password', 
+                'role',
+                'date_of_birth',
+                'primary_contact',
+                'aadhar_ssn'
+            ]
             
-            role = data.get("role")
-            first_name = data.get("first_name")
-            last_name = data.get("last_name")
-            email = data.get("primary_email")  # Changed from "email" to "primary_email"
-            password = data.get("password")
-            dob = data.get("date_of_birth")
-            primary_contact = data.get("primary_contact")
-            aadhar_ssn = data.get("aadhar_ssn")
+            # Check for missing fields
+            missing_fields = [field for field in required_fields if not data.get(field)]
+            if missing_fields:
+                return jsonify({
+                    "error": "Missing required fields",
+                    "missing_fields": missing_fields
+                }), 400
+
+            email = data.get('primary_email')
             
-            # Print individual fields
-            print("Parsed fields:", {
-                'role': role,
-                'first_name': first_name,
-                'last_name': last_name,
-                'email': email,
-                'password': password,
-                'date_of_birth': dob,
-                'primary_contact': primary_contact,
-                'aadhar_ssn': aadhar_ssn
-            })
-            
-            # Validate required fields
-            if not all([role, first_name, last_name, email, password]):
-                missing_fields = {
-                    'role': role is None,
-                    'first_name': first_name is None,
-                    'last_name': last_name is None,
-                    'email': email is None,
-                    'password': password is None
-                }
-                print("Missing or empty fields:", missing_fields)
-                return jsonify({"error": "All fields are required", "missing_fields": missing_fields}), 400
+            # Check if email is verified using Redis
+            verified = redis_client.get(f"verified:{email}")
+            if not verified:
+                return jsonify({"error": "Email not verified"}), 400
 
             # Check if user already exists
             existing_user = BaseUser.query.filter_by(primary_email=email).first()
             if existing_user:
-                print(f"User with email {email} already exists")
                 return jsonify({"error": "User already exists"}), 409
 
-            # Fix the password hashing
-            hashed_password = bcrypt_var.generate_password_hash(password).decode('utf-8')
-            
-            new_user = BaseUser(
-                first_name=first_name,
-                last_name=last_name,
-                primary_email=email,
-                password_hash=hashed_password,
-                role=role,
-                date_of_birth=dob,
-                primary_contact=primary_contact,
-                aadhar_ssn=aadhar_ssn
-            )
-            
-            print("Attempting to add new user to database:", {
-                'email': new_user.primary_email,
-                'first_name': new_user.first_name,
-                'role': new_user.role,
-                'date_of_birth': new_user.date_of_birth,
-                'primary_contact': new_user.primary_contact,
-                'aadhar_ssn': new_user.aadhar_ssn
-            })
-            
             try:
+                # Format date string to date object
+                date_of_birth = datetime.strptime(data['date_of_birth'], '%Y-%m-%d').date()
+                
+                # Hash password
+                hashed_password = bcrypt_var.generate_password_hash(data['password']).decode('utf-8')
+                
+                # Create new user
+                new_user = BaseUser(
+                    first_name=data['first_name'],
+                    last_name=data['last_name'],
+                    primary_email=email,
+                    password_hash=hashed_password,
+                    role=data['role'],
+                    date_of_birth=date_of_birth,
+                    primary_contact=data['primary_contact'],
+                    aadhar_ssn=data['aadhar_ssn']
+                )
+                
+
+                
                 db.session.add(new_user)
                 db.session.commit()
-                print("User successfully added to database")
+                # After successful registration, clear Redis keys
+                redis_client.delete(f"verification:{email}")
+                redis_client.delete(f"verified:{email}")
+                
+                return jsonify({
+                    "success": True,
+                    "message": "Registration successful",
+                    "user": {
+                        "email": new_user.primary_email,
+                        "role": new_user.role
+                    }
+                }), 201
+                
+            except ValueError as ve:
+                return jsonify({
+                    "error": "Invalid date format. Please use YYYY-MM-DD"
+                }), 400
+                
             except Exception as db_error:
                 db.session.rollback()
-                print("Database error:", str(db_error))
+                
                 return jsonify({"error": "Database error occurred"}), 500
 
-            return jsonify({"success": True, "message": "Registration successful"}), 201
-
         except Exception as e:
-            print("Registration error:", str(e))
             return jsonify({"error": str(e)}), 500
-    
+            
     return jsonify({"error": "Method not allowed"}), 405
 
 @app.route("/login", methods=["GET", "POST"])
@@ -198,8 +334,7 @@ def login():
             "redirect": redirect_url
         }), 200
 
-        # except Exception as e:
-        #     return jsonify({"error": str(e)}), 500
+
 
     return jsonify({"error": "Method not allowed"}), 405
 

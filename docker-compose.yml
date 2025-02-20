@@ -22,11 +22,14 @@ services:
     environment:
       - FLASK_ENV=development
       - DATABASE_URL=postgresql://Admin:Admin@db:5432/MaxRayUsers
+      - EMAIL_ADDRESS="xxxxxxxxxxxxx@xxxx.com"
+      - EMAIL_PASSWORD="xxxxxxxxxxxxx"
+      - REDIS_URL=redis://redis:6379
     volumes:
       - ./backend:/app
     depends_on:
       - db
-  
+      - redis
 
   frontend:
     build: ./frontend
@@ -41,5 +44,13 @@ services:
     stdin_open: true
     tty: true
 
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
 volumes:
   postgres_data:
+  redis_data:
