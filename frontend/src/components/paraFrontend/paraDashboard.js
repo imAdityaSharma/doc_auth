@@ -55,13 +55,15 @@ const DocDashboard = () => {
 
     const handleLogout = async () => {
         try {
-            await axios.post('http://localhost:5000/logout');
+            await axios.post('http://127.0.0.1:5000/logout');
+
             localStorage.removeItem('token');
             navigate('/login');
         } catch (err) {
             console.error('Logout error:', err);
         }
     };
+    
     const handleSettingsClick = () => {
         navigate('/settings');
       };
