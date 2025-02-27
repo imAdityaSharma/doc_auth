@@ -37,30 +37,16 @@ app.config.update(
 # Initialize Flask-Session
 Session(app)
 # Define allowed origins
-ALLOWED_ORIGINS = ["http://localhost:3000"]#, "http://127.0.0.1:3000"]
+ALLOWED_ORIGINS = ["http://127.0.0.1:3000"]
 # Configure CORS
-CORS(app, supports_credentials=True,
-     resources={
-         r"/*": {
-             "origins": ALLOWED_ORIGINS,
-             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-             "allow_headers": ["Content-Type", "Authorization", "Access-Control-Allow-Credentials", "Accept", "Origin", 
-                             "X-Requested-With", "Access-Control-Request-Method", "Access-Control-Request-Headers"],
-             
-             "max_age": 120
-         }
-     })
+CORS(app, 
+     supports_credentials=True,
+     origins=ALLOWED_ORIGINS,
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials", 
+                   "Accept", "Origin", "X-Requested-With", "Access-Control-Request-Method",
+                   "Access-Control-Request-Headers", "Access-Control-Allow-Origin"])
 
-# Add CORS headers to all responses
-@app.after_request
-def after_request(response):
-    origin = request.headers.get('Origin')
-    if origin in ALLOWED_ORIGINS:
-        response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials, Accept, Origin, X-Requested-With, Access-Control-Request-Method, Access-Control-Request-Headers'
-    return response
 # Store verification codes in Redis directly
 redis_client = redis.from_url(redis_url)
 
@@ -341,13 +327,24 @@ def login():
     return jsonify({"error": "Method not allowed"}), 405
 
 @app.route('/logout', methods=['POST', 'OPTIONS'])
-@cross_origin()
 def logout():
-    
+    if request.method == "OPTIONS":
+        response = jsonify({"success": True})
+        origin = request.headers.get('Origin')
+        if origin in ALLOWED_ORIGINS:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials, Accept, Origin, X-Requested-With, Access-Control-Request-Method, Access-Control-Request-Headers, Access-Control-Allow-Origin'
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            response.headers['Access-Control-Max-Age'] = '120'
+        return response, 200
+
     session.clear()
     response = jsonify({"message": "Successfully logged out"})
-    response.headers.add("Access-Control-Allow-Origin", "*")
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    origin = request.headers.get('Origin')
+    if origin in ALLOWED_ORIGINS:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
     return response, 200
 
 

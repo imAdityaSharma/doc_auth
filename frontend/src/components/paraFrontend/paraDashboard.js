@@ -20,7 +20,7 @@ const DocDashboard = () => {
 
                 console.log('Fetching with token:', token); // Debug log
 
-                const response = await axios.get('http://localhost:5000/para/paraDashboard', {
+                const response = await axios.get('http://127.0.0.1:5000/para/paraDashboard', {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
@@ -63,7 +63,7 @@ const DocDashboard = () => {
             console.error('Logout error:', err);
         }
     };
-    
+
     const handleSettingsClick = () => {
         navigate('/settings');
       };
