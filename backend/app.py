@@ -26,12 +26,15 @@ redis_url = os.getenv('REDIS_URL', 'redis://redis:6379')
 app.config.update(
     SESSION_TYPE='redis',
     SESSION_REDIS=redis.from_url(redis_url),
+    SESSION_KEY_PREFIX='session:',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
     SECRET_KEY='987qwert65fyhh',
-    SESSION_PERMANENT=True,
-    PERMANENT_SESSION_LIFETIME=timedelta(minutes=30),
-    SESSION_COOKIE_SECURE=False,
+    SESSION_COOKIE_NAME='session_id',
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='Lax'
+    SESSION_COOKIE_SECURE=False,  # Set to True in production with HTTPS
+    SESSION_COOKIE_SAMESITE='None',  # Changed from 'Lax' to 'None'
+    SESSION_COOKIE_PATH='/',
+    SESSION_COOKIE_DOMAIN=None,
 )
 
 # Initialize Flask-Session
@@ -347,8 +350,41 @@ def logout():
         response.headers['Access-Control-Allow-Credentials'] = 'true'
     return response, 200
 
+@app.route("/check-session", methods=['GET', 'OPTIONS'])
+def check_session():
+    if request.method == "OPTIONS":
+        response = jsonify({"success": True})
+        origin = request.headers.get('Origin')
+        if origin in ALLOWED_ORIGINS:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials'
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            response.headers['Access-Control-Max-Age'] = '120'
+        return response, 200
 
+    try:
+        # Check if user is logged in via session
+        if 'user_id' not in session:
+            return jsonify({"authenticated": False}), 401
 
+        # Get user from database
+        user = BaseUser.query.get(session['user_id'])
+        if not user:
+            return jsonify({"authenticated": False}), 401
+
+        return jsonify({
+            "authenticated": True,
+            "user": {
+                "email": user.primary_email,
+                "role": user.role,
+                "redirect": f"/{user.role.lower()}user/dashboard"
+            }
+        }), 200
+
+    except Exception as e:
+        print(f"Session check error: {str(e)}")
+        return jsonify({"authenticated": False, "error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)

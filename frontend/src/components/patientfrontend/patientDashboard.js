@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './patientuser.css';
+import Settings from '../overlays/Settings';
+
 export default function PatientDashboard() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const navigate = useNavigate();
   const [patientData, setPatientData] = useState({
     name: "",
@@ -44,7 +47,7 @@ export default function PatientDashboard() {
   // Mock patient data - replace with actual API call
 
   const handleSettingsClick = () => {
-    navigate('/settings');
+    setShowSettings(true);
   };
 
   const handleLogout = async () => {
@@ -156,6 +159,11 @@ export default function PatientDashboard() {
       <footer className="dashboard-footer">
         <p>&copy; 2024 Healthcare Portal. All rights reserved.</p>
       </footer>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <Settings onClose={() => setShowSettings(false)} />
+      )}
     </div>
   );
 }

@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import './parauser.css';
+import Settings from '../overlays/Settings';
 
 const DocDashboard = () => {
     const [doctorData, setDoctorData] = useState(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -65,8 +67,21 @@ const DocDashboard = () => {
     };
 
     const handleSettingsClick = () => {
-        navigate('/settings');
-      };
+        setShowSettings(true);
+        setShowProfileMenu(false); // Close profile menu when settings opens
+    };
+
+    // Handle clicking outside profile menu to close it
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (showProfileMenu && !event.target.closest('.profile-section')) {
+                setShowProfileMenu(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showProfileMenu]);
 
     if (loading) {
         return <div className="loading">Loading...</div>;
@@ -81,34 +96,37 @@ const DocDashboard = () => {
     }
 
     return (
-        <div className="dashboard-wrapper">
+        <div className={`dashboard-wrapper ${showSettings ? 'blur-background' : ''}`}>
             {/* Header */}
             <header className="dashboard-header">
-        <div className="header-left">
-          <h1>Paramedic Dashboard</h1>
-        </div>
-        <div className="header-right">
-          <div className="profile-section">
-            <button 
-              className="profile-button"
-              onClick={() => setShowProfileMenu(!showProfileMenu)}
-            >
-              <img 
-                src="" 
-                alt="Profile" 
-                className="profile-icon"
-              />
-            </button>
-            {showProfileMenu && (
-              <div className="profile-menu">
-                <button onClick={handleSettingsClick}>Settings</button>
-                <button onClick={() => navigate('/preferences')}>Preferences</button>
-                <button onClick={handleLogout}>Logout</button>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+                <div className="header-left">
+                    <h1>Paramedic Dashboard</h1>
+                </div>
+                <div className="header-right">
+                    <div className="profile-section">
+                        <button 
+                            className="profile-button"
+                            onClick={() => setShowProfileMenu(!showProfileMenu)}
+                        >
+                            <img 
+                                src="/path-to-default-avatar.png" 
+                                alt="Profile"
+                                className="profile-icon"
+                                onError={(e) => {
+                                    e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23666' d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+                                }}
+                            />
+                        </button>
+                        {showProfileMenu && (
+                            <div className="profile-menu">
+                                <button onClick={handleSettingsClick}>Settings</button>
+                                <button onClick={() => navigate('/preferences')}>Preferences</button>
+                                <button onClick={handleLogout}>Logout</button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </header>
 
             {/* Main Content */}
             <div className="dashboard-container">
@@ -154,6 +172,11 @@ const DocDashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Settings Modal */}
+            {showSettings && (
+                <Settings onClose={() => setShowSettings(false)} />
+            )}
         </div>
     );
 };

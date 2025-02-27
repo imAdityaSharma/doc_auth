@@ -1,7 +1,8 @@
-
 .dashboard-wrapper {
     min-height: 100vh;
     background-color: #f5f5f5;
+    position: relative;
+    z-index: 1;
 }
 
 .dashboard-header {
@@ -11,6 +12,8 @@
     padding: 1rem 2rem;
     background-color: #fff;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: relative;
+    z-index: 2;
 }
 
 .profile-section {
@@ -18,33 +21,39 @@
 }
 
 .profile-button {
-    background: #667eea;
-    color: white;
+    background: none;
     border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
     cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    background-color: #f0f0f0;
 }
 
 .profile-menu {
     position: absolute;
-    right: 0;
     top: 100%;
+    right: 0;
     background: white;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    border-radius: 4px;
-    padding: 0.5rem;
-    margin-top: 0.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 8px 0;
+    min-width: 150px;
+    z-index: 1000;
 }
 
 .profile-menu button {
-    display: block;
     width: 100%;
-    padding: 0.5rem 1rem;
-    border: none;
+    padding: 8px 16px;
     background: none;
-    cursor: pointer;
-    text-align: left;
 }
 
 .profile-menu button:hover {
@@ -53,6 +62,7 @@
 
 .dashboard-container {
     padding: 2rem;
+    transition: filter 0.3s ease;
 }
 
 .doctor-info {
@@ -112,4 +122,18 @@
     min-height: 100vh;
     color: #666;
     padding: 1rem;
+}
+
+/* Apply blur only to the main content when settings are open */
+.blur-background .dashboard-container,
+.blur-background .dashboard-header {
+    filter: blur(4px);
+    pointer-events: none;
+}
+
+/* Keep the settings modal clear */
+.settings-overlay,
+.settings-modal {
+    filter: none !important;
+    pointer-events: auto !important;
 }
