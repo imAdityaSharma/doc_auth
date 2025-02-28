@@ -5,7 +5,9 @@ const axiosInstance = axios.create({
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
-  },
+    'Access-Control-Allow-Origin': 'http://127.0.0.1:3000',
+    'Access-Control-Allow-Credentials': 'true'
+  }
 });
 
 // Add response interceptor to handle 401 responses
@@ -20,4 +22,4 @@ axiosInstance.interceptors.response.use(
   }
 );
 
-export default axiosInstance; 
+export default axiosInstance;

@@ -3,7 +3,8 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import './parauser.css';
 import Settings from '../overlays/Settings';
-
+import axiosInstance from '../../utils/axios';
+// Replace axios with axiosInstance in all API calls
 const DocDashboard = () => {
     const [doctorData, setDoctorData] = useState(null);
     const [error, setError] = useState(null);
@@ -57,8 +58,7 @@ const DocDashboard = () => {
 
     const handleLogout = async () => {
         try {
-            await axios.post('http://127.0.0.1:5000/logout');
-
+            await axiosInstance.post('/logout');
             localStorage.removeItem('token');
             navigate('/login');
         } catch (err) {

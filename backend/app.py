@@ -17,6 +17,7 @@ import redis
 import os
 import json
 from flask_cors import cross_origin
+from decorators import pre_flight_cors
 
 app = create_app()
 bcrypt_var = Bcrypt(app) 
@@ -45,10 +46,10 @@ ALLOWED_ORIGINS = ["http://127.0.0.1:3000"]
 CORS(app, 
      supports_credentials=True,
      origins=ALLOWED_ORIGINS,
-     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-     allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials", 
-                   "Accept", "Origin", "X-Requested-With", "Access-Control-Request-Method",
-                   "Access-Control-Request-Headers", "Access-Control-Allow-Origin"])
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+    #  allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
+    #  expose_headers=["Access-Control-Allow-Origin"],
+    #  max_age=120)
 
 # Store verification codes in Redis directly
 redis_client = redis.from_url(redis_url)
@@ -72,15 +73,7 @@ def load_user(user_id):
 def send_verification():
     # Handle preflight request
     if request.method == "OPTIONS":
-        response = jsonify({"success": True})
-        origin = request.headers.get('Origin')
-        if origin in ALLOWED_ORIGINS:
-            response.headers['Access-Control-Allow-Origin'] = origin
-            response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials'
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-            response.headers['Access-Control-Max-Age'] = '120'
-        return response, 200
+        return pre_flight_cors()
         
     try:
         data = request.get_json()
@@ -330,24 +323,14 @@ def login():
     return jsonify({"error": "Method not allowed"}), 405
 
 @app.route('/logout', methods=['POST', 'OPTIONS'])
+@cross_origin(supports_credentials=True)
 def logout():
     if request.method == "OPTIONS":
-        response = jsonify({"success": True})
-        origin = request.headers.get('Origin')
-        if origin in ALLOWED_ORIGINS:
-            response.headers['Access-Control-Allow-Origin'] = origin
-            response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials, Accept, Origin, X-Requested-With, Access-Control-Request-Method, Access-Control-Request-Headers, Access-Control-Allow-Origin'
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-            response.headers['Access-Control-Max-Age'] = '120'
-        return response, 200
+        return pre_flight_cors()
 
     session.clear()
     response = jsonify({"message": "Successfully logged out"})
-    origin = request.headers.get('Origin')
-    if origin in ALLOWED_ORIGINS:
-        response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
+   
     return response, 200
 
 @app.route("/check-session", methods=['GET', 'OPTIONS'])
