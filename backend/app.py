@@ -76,7 +76,7 @@ email_server = EmailServer()
 def load_user(user_id):
     return BaseUser.query.get(int(user_id))
 
-@app.route("/send-verification", methods=["GET", "POST", "OPTIONS"])
+@app.route("/send-verification", methods=["GET","POST", "OPTIONS"])
 def send_verification():
     # Handle preflight request
     if request.method == "OPTIONS":
@@ -95,11 +95,23 @@ def send_verification():
         
         # For registration, we want to prevent existing emails
         # For password change, we want to ensure the email exists
+
+        """ SECURITY VULNERABILITY NEEDS TO BE FIXED"""
         if not is_password_change and existing_user:
             return jsonify({"error": "Email already registered"}), 409
         elif is_password_change and not existing_user:
             return jsonify({"error": "Email not found"}), 404
-            
+        """----------------------------------------"""
+        """FIX, BUT SESSION NOT WORKING
+        '''
+        if 'is_password_change' in data:
+            # Check if user is authenticated through session
+            if 'user_id' not in session or session['email'] != email:
+                return jsonify({"error": "Unauthorized password change request"}), 401
+        elif existing_user:
+            return jsonify({"error": "Email already registered"}), 409
+        '''
+        ---------------------------------------------"""    
         # Generate verification token
         verification_token = secrets.token_hex(3)  # 6-digit hex code
         
