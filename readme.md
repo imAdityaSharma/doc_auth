@@ -11,7 +11,7 @@ A comprehensive healthcare management system with role-based access for patients
 - [x] Registration functionality
 - [x] Logout functionality
 - [x] Token-based API protection
-- [ ] Password reset flow
+- [x] Password reset flow
 - [ ] 2FA implementation
 
 ### User Dashboards
@@ -75,7 +75,7 @@ A comprehensive healthcare management system with role-based access for patients
 - [x] Settings interface
 - [ ] Dark mode
 - [ ] Notifications system
-- [ ] File upload system
+- [x] File upload system
 
 ### Security Features
 - [x] JWT Authentication
