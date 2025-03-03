@@ -104,23 +104,6 @@ class BaseUser(UserMixin, db.Model):
     #     return codes
 
     # Email Verification Methods
-    def generate_email_verification_token(self):
-        """Generate a new email verification token"""
-        
-        self.email_verification_token = secrets.token_urlsafe(32)
-        self.email_verification_sent_at = datetime.utcnow()
-        db.session.commit()
-        return self.email_verification_token
-
-    def verify_email(self, token):
-        """Verify email with token"""
-        if token == self.email_verification_token:
-            if self.email_verification_sent_at + timedelta(hours=24) > datetime.utcnow():
-                self.email_verified = True
-                self.email_verification_token = None
-                db.session.commit()
-                return True
-        return False
 
     # Phone Verification Methods
     # def generate_phone_verification_code(self):

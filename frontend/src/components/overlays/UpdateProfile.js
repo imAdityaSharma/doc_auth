@@ -37,7 +37,7 @@ const UpdateProfile = ({ onClose }) => {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        const response = await axiosInstance.get('/puser/filldata');
+        const response = await axiosInstance.get('/comms/filldata');
         console.log('Fetched user data:', response.data);
         // const profilePicUrl = response.data.profile_pic ? 
         //   `http://127.0.0.1:5000${response.data.profile_pic}` :

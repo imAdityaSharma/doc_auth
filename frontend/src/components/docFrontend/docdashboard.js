@@ -5,11 +5,13 @@ import './docuser.css';
 import Settings from '../overlays/Settings';
 import UpdateProfile from '../overlays/UpdateProfile';
 import SecureImage from '../common/SecureImage'; 
+import AccountSecurity from '../overlays/AccountSecurity';
 
 const DocDashboard = () => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [showUpdateProfile, setShowUpdateProfile] = useState(false); 
+    const [showAccountSecurity, setAccountSecurity] = useState(false);
     const [previewUrl, setPreviewUrl] = useState('/default-profile.png');
     const [doctorData, setDoctorData] = useState(null);
     const [error] = useState(null);
@@ -87,7 +89,10 @@ const DocDashboard = () => {
     const handleAccountSettingsClick = () => {
         setShowUpdateProfile(true);  // Updated function to use new state variable name
       };
-    
+    const handleAccountSecurityClick =() =>{
+        setShowProfileMenu(false);
+        setAccountSecurity(true);
+    }
     const closeSettings = () => {
         setShowSettings(false);
     };
@@ -95,6 +100,9 @@ const DocDashboard = () => {
     const closeUpdateProfile = () => {
         setShowUpdateProfile(false);
     };
+    const closeAccountSecurity = () => {
+      setAccountSecurity(false);
+  };
 
     if (loading) {
         return <div>Loading...</div>;
@@ -137,6 +145,7 @@ const DocDashboard = () => {
               <div className="profile-menu">
                 <button onClick={() => { handleSettingsClick(); setShowProfileMenu(false); }}>Settings</button>
                 <button onClick={() => { handleAccountSettingsClick(); setShowProfileMenu(false); }}>Account Preferences</button>
+                <button onClick={() => { handleAccountSecurityClick(); setShowProfileMenu(false); }}>Account Security</button>
                 <button onClick={() => { handleLogout(); setShowProfileMenu(false); }}>Logout</button>
               </div>
             )}
@@ -211,6 +220,9 @@ const DocDashboard = () => {
       {showUpdateProfile && (  // Updated condition
         <UpdateProfile onClose={closeUpdateProfile} />  // Updated handler
       )}
+       {showAccountSecurity && (
+                <AccountSecurity onClose={closeAccountSecurity} />
+            )}
         </div>
     );
 };

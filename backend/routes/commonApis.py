@@ -1,18 +1,23 @@
 from flask import Blueprint, request, jsonify
-from Users import BaseUser, Doctor, Patient, Paramedic
-from database import db
+from Users import BaseUser, Doctor, Patient
+
 import jwt
 from flask import current_app
+
+import os
+
 from decorators import token_required
 
-para_bp = Blueprint('para', __name__)
+import redis
 
 
+redis_url = os.getenv('REDIS_URL', 'redis://redis:6379')
+redis_client = redis.from_url(redis_url)
+comms_bp = Blueprint('comms', __name__)
 
-@para_bp.route('/paraDashboard', methods=['GET'])
+@comms_bp.route("/filldata", methods = ['GET'])
 @token_required
-def paraDashboard():
-    # Get the Authorization header
+def fill_data():
     try:
         # Get token from header
         auth_header = request.headers.get('Authorization')
@@ -24,7 +29,7 @@ def paraDashboard():
         try:
             # Verify token
             data = jwt.decode(token, str(current_app.config['SECRET_KEY']), algorithms=["HS256"])
-            current_user = Paramedic.query.get(data['user_id'])
+            current_user = BaseUser.query.get(data['user_id'])
             
             if not current_user:
                 return jsonify({"error": "User not found"}), 404
@@ -34,24 +39,28 @@ def paraDashboard():
         except jwt.InvalidTokenError:
             return jsonify({"error": "Invalid token"}), 401
 
-        para_data = {
-            "first_name": current_user.first_name,
-            "last_name":current_user.last_name,
+        patient_data = {
+            "name": current_user.first_name,
             "email": current_user.primary_email,
-            "role": current_user.role,
-            "primary_contact":current_user.primary_contact,
-            "dob":current_user.date_of_birth,
-            "upcomingAppointments": [],  # Query appointments table
-            "recentPrescriptions": []    # Query prescriptions table
+            "primary_contact": current_user.primary_contact,
+	        "last_name": current_user.last_name,
+	        "date_of_birth":current_user.date_of_birth,
+	        "house_no":current_user.house_no,
+            "apartment":current_user.apartment,
+            "colony":current_user.colony,
+            "city": current_user.city ,
+            "pin_code":current_user.pin_code,
+            "state":current_user.state ,
+            "primary_email":current_user.primary_email,
+            "aadhar_ssn":current_user.aadhar_ssn ,
+            "profile_pic": current_user.profile_pic,
         }
         
-        response = jsonify(para_data)
+        response = jsonify(patient_data)
         response.headers.add('Access-Control-Allow-Origin', 'http://127.0.0.1:3000')
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response, 200
-        
     except Exception as e:
         print(f"Dashboard error: {str(e)}")
-        return jsonify({"error": "Failed to fetch dashboard data"}), 500
-
+        return jsonify({"error": "Failed to fetch data"}), 500
     

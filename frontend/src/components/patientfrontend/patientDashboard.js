@@ -5,11 +5,14 @@ import './styles/patientuser.css';
 import Settings from '../overlays/Settings';
 import UpdateProfile from '../overlays/UpdateProfile';
 import SecureImage from '../common/SecureImage'; 
+import AccountSecurity from '../overlays/AccountSecurity';
+
 
 export default function PatientDashboard() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showUpdateProfile, setShowUpdateProfile] = useState(false); 
+  const [showAccountSecurity, setAccountSecurity] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('/default-profile.png');
   const navigate = useNavigate();
   const [patientData, setPatientData] = useState({
@@ -65,12 +68,26 @@ export default function PatientDashboard() {
 
   // Mock patient data - replace with actual API call
 
-  const handleSettingsClick = () => {
+const handleSettingsClick = () => {
     setShowSettings(true);
   };
-  const handleAccountSettingsClick = () => {
+const handleAccountSettingsClick = () => {
     setShowUpdateProfile(true);  // Updated function to use new state variable name
   };
+const handleAccountSecurityClick =() =>{
+    setShowProfileMenu(false);
+    setAccountSecurity(true);
+}
+const closeSettings = () => {
+    setShowSettings(false);
+};
+
+const closeUpdateProfile = () => {
+    setShowUpdateProfile(false);
+};
+const closeAccountSecurity = () => {
+  setAccountSecurity(false);
+};
 
   const handleLogout = async () => {
     try {
@@ -118,6 +135,7 @@ export default function PatientDashboard() {
               <div className="profile-menu">
                 <button onClick={() => { handleSettingsClick(); setShowProfileMenu(false); }}>Settings</button>
                 <button onClick={() => { handleAccountSettingsClick(); setShowProfileMenu(false); }}>Account Preferences</button>
+                <button onClick={() => { handleAccountSecurityClick(); setShowProfileMenu(false); }}>Account Security</button>
                 <button onClick={() => { handleLogout(); setShowProfileMenu(false); }}>Logout</button>
               </div>
             )}
@@ -196,6 +214,9 @@ export default function PatientDashboard() {
       {showUpdateProfile && (  // Updated condition
         <UpdateProfile onClose={() => setShowUpdateProfile(false)} />  // Updated handler
       )}
+      {showAccountSecurity && (
+                <AccountSecurity onClose={closeAccountSecurity} />
+            )}
     </div>
   );
 }
