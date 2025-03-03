@@ -1,15 +1,13 @@
 from flask import Flask, jsonify, request, session
 from flask_cors import CORS
 # from authlib.integrations.flask_client import OAuth
+from flask import send_from_directory, make_response
 from datetime import datetime, timedelta, timezone
 from flask_login import LoginManager, login_user
 from database import db, create_app
 from Users import BaseUser
 import jwt
 from flask_bcrypt import Bcrypt 
-from routes.doctorapis import doctor_bp
-from routes.patientapis import patient_bp
-from routes.paraApis import para_bp
 from utils.EmailServer import EmailServer
 import secrets
 from flask_session import Session  # Add this import
@@ -17,21 +15,32 @@ import redis
 import os
 import json
 from flask_cors import cross_origin
+from decorators import pre_flight_cors
+from decorators import token_required
 
+from routes.doctorapis import doctor_bp
+from routes.patientapis import patient_bp
+from routes.paraApis import para_bp
+from routes.commonApis import comms_bp  
 app = create_app()
 bcrypt_var = Bcrypt(app) 
 
 # Configure Redis
 redis_url = os.getenv('REDIS_URL', 'redis://redis:6379')
+redis_client = redis.from_url(redis_url)
+
 app.config.update(
     SESSION_TYPE='redis',
     SESSION_REDIS=redis.from_url(redis_url),
+    SESSION_KEY_PREFIX='session:',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
     SECRET_KEY='987qwert65fyhh',
-    SESSION_PERMANENT=True,
-    PERMANENT_SESSION_LIFETIME=timedelta(minutes=30),
-    SESSION_COOKIE_SECURE=False,
+    SESSION_COOKIE_NAME='session_id',
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='Lax'
+    SESSION_COOKIE_SECURE=False,  # Set to True in production with HTTPS
+    SESSION_COOKIE_SAMESITE='None',  # Changed from 'Lax' to 'None'
+    SESSION_COOKIE_PATH='/',
+    SESSION_COOKIE_DOMAIN=None,
 )
 
 # Initialize Flask-Session
@@ -42,17 +51,20 @@ ALLOWED_ORIGINS = ["http://127.0.0.1:3000"]
 CORS(app, 
      supports_credentials=True,
      origins=ALLOWED_ORIGINS,
-     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-     allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials", 
-                   "Accept", "Origin", "X-Requested-With", "Access-Control-Request-Method",
-                   "Access-Control-Request-Headers", "Access-Control-Allow-Origin"])
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+    #  allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
+    #  expose_headers=["Access-Control-Allow-Origin"],
+    #  max_age=120)
 
 # Store verification codes in Redis directly
-redis_client = redis.from_url(redis_url)
+
 
 app.register_blueprint(doctor_bp, url_prefix='/doc')
 app.register_blueprint(patient_bp, url_prefix='/puser')
-app.register_blueprint(para_bp, url_prefix='/para')
+app.register_blueprint(para_bp,url_prefix = "/para")
+app.register_blueprint(comms_bp,url_prefix = "/comms")
+
+
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -64,31 +76,29 @@ email_server = EmailServer()
 def load_user(user_id):
     return BaseUser.query.get(int(user_id))
 
-
-@app.route("/send-verification", methods=["POST", "OPTIONS"])
+@app.route("/send-verification", methods=["GET", "POST", "OPTIONS"])
 def send_verification():
     # Handle preflight request
     if request.method == "OPTIONS":
-        response = jsonify({"success": True})
-        origin = request.headers.get('Origin')
-        if origin in ALLOWED_ORIGINS:
-            response.headers['Access-Control-Allow-Origin'] = origin
-            response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials'
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-            response.headers['Access-Control-Max-Age'] = '120'
-        return response, 200
+        return pre_flight_cors()
         
     try:
         data = request.get_json()
-        email = data.get('email')        
+        email = data.get('email')
+        is_password_change = data.get('isPasswordChange', False)  # New parameter
+        
         if not email:
             return jsonify({"error": "Email is required"}), 400
             
-        # Check if email already exists
+        # Check if email exists
         existing_user = BaseUser.query.filter_by(primary_email=email).first()
-        if existing_user:
+        
+        # For registration, we want to prevent existing emails
+        # For password change, we want to ensure the email exists
+        if not is_password_change and existing_user:
             return jsonify({"error": "Email already registered"}), 409
+        elif is_password_change and not existing_user:
+            return jsonify({"error": "Email not found"}), 404
             
         # Generate verification token
         verification_token = secrets.token_hex(3)  # 6-digit hex code
@@ -97,11 +107,12 @@ def send_verification():
         verification_data = {
             'email': email,
             'token': verification_token,
+            'is_password_change': is_password_change,  # Store the purpose
             'expires': (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat()
         }
         # Use email as key in Redis
         redis_key = f"verification:{email}"
-        redis_client.setex( redis_key, timedelta(minutes=30), json.dumps(verification_data))
+        redis_client.setex(redis_key, timedelta(minutes=30), json.dumps(verification_data))
 
         # Send verification email
         if email_server.send_verification_email(email, verification_token):
@@ -327,28 +338,129 @@ def login():
     return jsonify({"error": "Method not allowed"}), 405
 
 @app.route('/logout', methods=['POST', 'OPTIONS'])
+@cross_origin(supports_credentials=True)
 def logout():
+    if request.method == "OPTIONS":
+        return pre_flight_cors()
+
+    session.clear()
+    response = jsonify({"message": "Successfully logged out"})
+   
+    return response, 200
+
+@app.route("/check-session", methods=['GET', 'OPTIONS'])
+def check_session():
     if request.method == "OPTIONS":
         response = jsonify({"success": True})
         origin = request.headers.get('Origin')
         if origin in ALLOWED_ORIGINS:
             response.headers['Access-Control-Allow-Origin'] = origin
-            response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials, Accept, Origin, X-Requested-With, Access-Control-Request-Method, Access-Control-Request-Headers, Access-Control-Allow-Origin'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials'
             response.headers['Access-Control-Allow-Credentials'] = 'true'
             response.headers['Access-Control-Max-Age'] = '120'
         return response, 200
 
-    session.clear()
-    response = jsonify({"message": "Successfully logged out"})
-    origin = request.headers.get('Origin')
-    if origin in ALLOWED_ORIGINS:
-        response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
-    return response, 200
+    try:
+        # Check if user is logged in via session
+        if 'user_id' not in session:
+            return jsonify({"authenticated": False}), 401
 
+        # Get user from database
+        user = BaseUser.query.get(session['user_id'])
+        if not user:
+            return jsonify({"authenticated": False}), 401
 
+        return jsonify({
+            "authenticated": True,
+            "user": {
+                "email": user.primary_email,
+                "role": user.role,
+                "redirect": f"/{user.role.lower()}user/dashboard"
+            }
+        }), 200
 
+    except Exception as e:
+        print(f"Session check error: {str(e)}")
+        return jsonify({"authenticated": False, "error": str(e)}), 500
+    
+
+@app.route('/uploads/<path:filename>')
+@token_required
+def uploaded_file(filename):
+    try:
+        if '..' in filename or filename.startswith('/'):
+            return jsonify({"error": "Invalid file path"}), 403
+            
+        if not filename.startswith('profile_pics/'):
+            return jsonify({"error": "Access denied"}), 403
+
+        # Get the file path
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        # Check if file exists
+        if not os.path.exists(file_path):
+            return jsonify({"error": "File not found"}), 404
+
+        # Send file with cache control headers
+        response = make_response(send_from_directory(app.config['UPLOAD_FOLDER'], filename))
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+
+    except Exception as e:
+        print(f"Error serving file: {str(e)}")
+        return jsonify({"error": "File not found"}), 404
+
+@app.route("/password_change", methods = ['POST'])
+@token_required
+def password_change():
+    if request.method == "POST":    
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({"error": "Invalid request data"}), 400
+            # Extract and validate all required fields
+            required_fields = [
+                'password',
+                'email'
+            ]
+            # Check for missing fields
+            missing_fields = [field for field in required_fields if not data.get(field)]
+            if missing_fields:
+                return jsonify({
+                    "error": "Missing required fields",
+                    "missing_fields": missing_fields
+                }), 400
+
+            email = data.get('email')
+            # Check if user exists
+            existing_user = BaseUser.query.filter_by(primary_email=email).first()
+            if not existing_user:
+                return jsonify({"error": "User not found"}), 404
+
+            try:
+                # Hash new password
+                hashed_password = bcrypt_var.generate_password_hash(data['password']).decode('utf-8')
+                
+                # Update user's password
+                existing_user.password_hash = hashed_password
+                db.session.commit()
+                
+                return jsonify({
+                    "success": True,
+                    "message": "Password updated successfully"
+                }), 200
+                    
+            except Exception as db_error:
+                db.session.rollback()
+                return jsonify({"error": "Database error occurred"}), 500
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+            
+    return jsonify({"error": "Method not allowed"}), 405
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)

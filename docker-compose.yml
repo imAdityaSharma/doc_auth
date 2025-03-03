@@ -22,8 +22,6 @@ services:
     environment:
       - FLASK_ENV=development
       - DATABASE_URL=postgresql://Admin:Admin@db:5432/MaxRayUsers
-      - EMAIL_ADDRESS="xxxxxxxxxxxxx@xxxx.com"
-      - EMAIL_PASSWORD="xxxxxxxxxxxxx"
       - REDIS_URL=redis://redis:6379
     volumes:
       - ./backend:/app

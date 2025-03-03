@@ -21,51 +21,22 @@ export default function RegisterPage() {
     confirm_password: "",
     aadhar_ssn: "",
     role: role,
+    email_verified: false
   });
 
   const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
+  const [verificationStatus, setVerificationStatus] = useState({
+    isVerifying: false,
+    verificationSent: false,
+    verified: false,
+    error: null
+  });
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-
-  const registerUser = () => {
-    if (formData.password !== formData.confirm_password) {
-      alert("Passwords do not match");
-      return;
-    }
-
-    axios
-      .post("http://localhost:5000/register", formData)
-      .then((response) => {
-        console.log(response);
-        if (response.data.success) {
-          navigate("/home");
-        } else {
-          alert("Registration failed");
-        }
-      })
-      .catch((error) => {
-        console.log(error);
-        if (error.response && error.response.data && error.response.data.message) {
-          alert(error.response.data.message);
-        } else {
-          alert("Registration failed. Please try again later.");
-        }
-      });
-  };
-
-  const [currentStep, setCurrentStep] = useState(1);
-
-  const nextStep = () => {
-    setCurrentStep(currentStep + 1);
-  };
-
-  const prevStep = () => {
-    setCurrentStep(currentStep - 1);
-  };
-
-  const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
 
   const handleOTPChange = (index, value) => {
     if (value.length > 1) return;
@@ -88,60 +59,6 @@ export default function RegisterPage() {
     }
   };
 
-  const verifyCode = async () => {
-    try {
-      const code = verificationCode.join('');
-      console.log('Sending verification request with:', {
-        email: formData.primary_email,
-        code: code
-      });
-
-      const response = await axios.post(
-        'http://localhost:5000/verify-email',
-        {
-          email: formData.primary_email,
-          code: code
-        },
-        {
-          withCredentials: true,
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      console.log('Verification response:', response.data);
-
-      if (response.data.success) {
-        setVerificationStatus({
-          isVerifying: false,
-          verified: true,
-          error: null
-        });
-        setFormData({
-          ...formData,
-          email_verified: true
-        });
-        alert('Email verified successfully!');
-      }
-    } catch (error) {
-      console.error('Verification error:', error.response?.data);
-      setVerificationStatus({
-        isVerifying: false,
-        verified: false,
-        error: error.response?.data?.error || 'Failed to verify code'
-      });
-      alert(error.response?.data?.error || 'Failed to verify code');
-    }
-  };
-
-  const [verificationStatus, setVerificationStatus] = useState({
-    isVerifying: false,
-    verificationSent: false,
-    verified: false,
-    error: null
-  });
-
   const sendVerificationCode = async () => {
     try {
       setVerificationStatus({
@@ -163,8 +80,6 @@ export default function RegisterPage() {
         }
       );
 
-      console.log('Verification response:', response);
-
       if (response.data.success) {
         setVerificationStatus({
           isVerifying: false,
@@ -175,7 +90,6 @@ export default function RegisterPage() {
         alert('Verification code sent! Please check your email.');
       }
     } catch (error) {
-      console.error('Error sending verification code:', error);
       setVerificationStatus({
         isVerifying: false,
         verificationSent: false,
@@ -186,706 +100,401 @@ export default function RegisterPage() {
     }
   };
 
-  return role === 'patient' ? (
+  const verifyCode = async () => {
+    try {
+      const code = verificationCode.join('');
+      const response = await axios.post(
+        'http://localhost:5000/verify-email',
+        {
+          email: formData.primary_email,
+          code: code
+        },
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.data.success) {
+        setVerificationStatus({
+          isVerifying: false,
+          verified: true,
+          error: null
+        });
+        setFormData({
+          ...formData,
+          email_verified: true
+        });
+        alert('Email verified successfully!');
+      }
+    } catch (error) {
+      setVerificationStatus({
+        isVerifying: false,
+        verified: false,
+        error: error.response?.data?.error || 'Failed to verify code'
+      });
+      alert(error.response?.data?.error || 'Failed to verify code');
+    }
+  };
+
+  const registerUser = () => {
+    if (!formData.email_verified) {
+      alert("Please verify your email before registering");
+      return;
+    }
+
+    if (formData.password !== formData.confirm_password) {
+      alert("Passwords do not match");
+      return;
+    }
+
+    axios
+      .post("http://localhost:5000/register", formData)
+      .then((response) => {
+        if (response.data.success) {
+          navigate("/login");
+        } else {
+          alert("Registration failed");
+        }
+      })
+      .catch((error) => {
+        if (error.response?.data?.message) {
+          alert(error.response.data.message);
+        } else {
+          alert("Registration failed. Please try again later.");
+        }
+      });
+  };
+
+  const nextStep = () => {
+    if (currentStep === 1 && !formData.email_verified) {
+      alert("Please verify your email before proceeding");
+      return;
+    }
+    setCurrentStep(currentStep + 1);
+  };
+
+  const prevStep = () => {
+    setCurrentStep(currentStep - 1);
+  };
+
+  // Render form steps based on user role and current step
+  const renderFormStep = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <div className="form-section">
+            <h3>Personal Information</h3>
+            <div className="form-row">
+              <div className="form-group">
+                <label>First Name *</label>
+                <input 
+                  type="text" 
+                  name="first_name"
+                  value={formData.first_name}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Last Name *</label>
+                <input 
+                  type="text"
+                  name="last_name"
+                  value={formData.last_name}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Date of Birth *</label>
+                <input
+                  type="date"
+                  name="date_of_birth"
+                  value={formData.date_of_birth}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Contact Number *</label>
+                <input
+                  type="tel"
+                  name="primary_contact"
+                  value={formData.primary_contact}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Email Address *</label>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <div style={{ flex: 1 }}>
+                  <input
+                    type="email"
+                    name="primary_email"
+                    value={formData.primary_email}
+                    onChange={handleChange}
+                    required
+                  />
+                  <button 
+                    type="button"
+                    onClick={sendVerificationCode}
+                    disabled={!formData.primary_email || verificationStatus.isVerifying}
+                    style={{ marginTop: '5px' }}
+                  >
+                    {verificationStatus.isVerifying ? 'Sending...' : 'Get Verification Code'}
+                  </button>
+                </div>
+                
+                {verificationStatus.verificationSent && (
+                  <div style={{ flex: 1 }}>
+                    <div className="form-group">
+                      <label>Verification Code *</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                          {[0, 1, 2, 3, 4, 5].map((index) => (
+                            <input
+                              key={index}
+                              id={`otp-${index}`}
+                              type="text"
+                              value={verificationCode[index]}
+                              onChange={(e) => handleOTPChange(index, e.target.value)}
+                              onKeyDown={(e) => handleKeyDown(index, e)}
+                              maxLength={1}
+                              style={{
+                                width: '40px',
+                                height: '40px',
+                                textAlign: 'center',
+                                fontSize: '1.2em',
+                                border: '1px solid #ccc',
+                                borderRadius: '4px',
+                                margin: '0 4px'
+                              }}
+                              disabled={verificationStatus.verified}
+                            />
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={verifyCode}
+                          disabled={verificationCode.some(digit => digit === '') || 
+                                   verificationStatus.isVerifying || 
+                                   verificationStatus.verified}
+                          style={{
+                            padding: '8px 16px',
+                            backgroundColor: verificationStatus.verified ? '#4CAF50' : '#007bff',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            marginTop: '10px'
+                          }}
+                        >
+                          {verificationStatus.isVerifying ? 'Verifying...' : 
+                           verificationStatus.verified ? 'Verified ✓' : 'Verify Code'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Password *</label>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Confirm Password *</label>
+                <input
+                  type="password"
+                  name="confirm_password"
+                  value={formData.confirm_password}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Aadhar/SSN *</label>
+              <input
+                type="text"
+                name="aadhar_ssn"
+                value={formData.aadhar_ssn}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+        );
+      
+      case 2:
+        return (
+          <div className="form-section">
+            <h3>{role === 'patient' ? 'Health Information' : 'Professional Information'}</h3>
+            {role === 'patient' && (
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Weight (kg)</label>
+                  <input
+                    type="number"
+                    name="weight"
+                    value={formData.weight}
+                    onChange={handleChange}
+                    min="0.5"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Height</label>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <input
+                      type="number"
+                      name="height"
+                      value={formData.height}
+                      onChange={handleChange}
+                      min="24"
+                      placeholder={formData.height_unit === 'cm' ? 'cm' : 'ft'}
+                    />
+                    <select 
+                      name="height_unit"
+                      value={formData.height_unit}
+                      onChange={handleChange}
+                    >
+                      <option value="cm">cm</option>
+                      <option value="ft">ft/in</option>
+                    </select>
+                    {formData.height_unit === 'ft' && (
+                      <input
+                        type="number"
+                        name="height_inches"
+                        value={formData.height_inches}
+                        onChange={handleChange}
+                        min="0"
+                        max="11"
+                        placeholder="in"
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            {role === 'doctor' && (
+              <>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Medical License Number *</label>
+                    <input
+                      type="text"
+                      name="license_number"
+                      value={formData.license_number}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Specialization *</label>
+                    <input
+                      type="text"
+                      name="specialization"
+                      value={formData.specialization}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+            {role === 'paramedic' && (
+              <div className="form-row">
+                <div className="form-group">
+                  <label>EMT License Number *</label>
+                  <input
+                    type="text"
+                    name="emt_license"
+                    value={formData.emt_license}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Certification Level *</label>
+                  <select
+                    name="certification_level"
+                    value={formData.certification_level}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="">Select Level</option>
+                    <option value="EMT-B">EMT-Basic</option>
+                    <option value="EMT-I">EMT-Intermediate</option>
+                    <option value="EMT-P">Paramedic</option>
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      
+      case 3:
+        return (
+          <div className="form-section">
+            <h3>Review & Submit</h3>
+            <div className="review-section">
+              {/* Display entered information for review */}
+            </div>
+          </div>
+        );
+      
+      default:
+        return null;
+    }
+  };
+
+  return (
     <div className="register-page">
       <div className="register-container">
         <div className="register-form-wrapper">
           <div className="form-header">
-            <h1>Create Patient Account</h1>
+            <h1>Create {role.charAt(0).toUpperCase() + role.slice(1)} Account</h1>
             <p>Step {currentStep} of 3</p>
           </div>
 
           <form className="registration-form" onSubmit={e => e.preventDefault()}>
             <div className="form-sections">
-              {currentStep === 1 && (
-                <div className="form-section">
-                  <h3>Personal Information</h3>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>First Name *</label>
-                      <input 
-                        type="text" 
-                        name="first_name"
-                        value={formData.first_name}
-                        onChange={handleChange}
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Last Name *</label>
-                      <input 
-                        type="text"
-                        name="last_name"
-                        value={formData.last_name}
-                        onChange={handleChange}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Date of Birth *</label>
-                      <input
-                        type="date"
-                        name="date_of_birth"
-                        value={formData.date_of_birth}
-                        onChange={handleChange}
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Contact Number *</label>
-                      <input
-                        type="tel"
-                        name="primary_contact"
-                        value={formData.primary_contact}
-                        onChange={handleChange}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label>Email Address *</label>
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                      <div style={{ flex: 1 }}>
-                        <input
-                          type="email"
-                          name="primary_email"
-                          value={formData.primary_email}
-                          onChange={handleChange}
-                          required
-                        />
-                        <button 
-                          type="button"
-                          onClick={sendVerificationCode}
-                          disabled={!formData.primary_email || verificationStatus.isVerifying}
-                          style={{ marginTop: '5px' }}
-                        >
-                          {verificationStatus.isVerifying ? 'Sending...' : 'Get Verification Code'}
-                        </button>
-                      </div>
-                      {verificationStatus.verificationSent && (
-                        <div style={{ flex: 1 }}>
-                          <div className="form-group">
-                            <label>Verification Code *</label>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                                {[0, 1, 2, 3, 4, 5].map((index) => (
-                                  <input
-                                    key={index}
-                                    id={`otp-${index}`}
-                                    type="text"
-                                    value={verificationCode[index]}
-                                    onChange={(e) => handleOTPChange(index, e.target.value)}
-                                    onKeyDown={(e) => handleKeyDown(index, e)}
-                                    maxLength={1}
-                                    style={{
-                                      width: '40px',
-                                      height: '40px',
-                                      textAlign: 'center',
-                                      fontSize: '1.2em',
-                                      border: '1px solid #ccc',
-                                      borderRadius: '4px',
-                                      margin: '0 4px'
-                                    }}
-                                    disabled={verificationStatus.verified}
-                                  />
-                                ))}
-                              </div>
-                              <button
-                                type="button"
-                                onClick={verifyCode}
-                                disabled={verificationCode.some(digit => digit === '') || verificationStatus.isVerifying || verificationStatus.verified}
-                                style={{
-                                  padding: '8px 16px',
-                                  backgroundColor: verificationStatus.verified ? '#4CAF50' : '#007bff',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer',
-                                  marginTop: '10px'
-                                }}
-                              >
-                                {verificationStatus.isVerifying ? 'Verifying...' : 
-                                 verificationStatus.verified ? 'Verified ✓' : 'Verify Code'}
-                              </button>
-                              {verificationStatus.error && (
-                                <div style={{ color: 'red', fontSize: '0.8em', marginTop: '5px' }}>
-                                  {verificationStatus.error}
-                                </div>
-                              )}
-                              {verificationStatus.verified && (
-                                <div style={{ color: 'green', fontSize: '0.8em', marginTop: '5px' }}>
-                                  Email verified successfully!
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Password *</label>
-                      <input
-                        type="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Confirm Password *</label>
-                      <input
-                        type="password"
-                        name="confirm_password"
-                        value={formData.confirm_password}
-                        onChange={handleChange}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label>Aadhar/SSN *</label>
-                    <input
-                      type="text"
-                      name="aadhar_ssn"
-                      value={formData.aadhar_ssn}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-              )}
-
-              {currentStep === 2 && (
-                <div className="form-section">
-                  <h3>Health Metrics</h3>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Weight (kg)</label>
-                      <input
-                        type="number"
-                        name="weight"
-                        value={formData.weight}
-                        onChange={handleChange}
-                        min="0.5"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Height</label>
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        <input
-                          type="number"
-                          name="height"
-                          value={formData.height}
-                          onChange={handleChange}
-                          min="24"
-                          placeholder={formData.height_unit === 'cm' ? 'cm' : 'ft'}
-                        />
-                        <select 
-                          name="height_unit"
-                          value={formData.height_unit}
-                          onChange={handleChange}
-                        >
-                          <option value="cm">cm</option>
-                          <option value="ft">ft/in</option>
-                        </select>
-                        {formData.height_unit === 'ft' && (
-                          <input
-                            type="number"
-                            name="height_inches"
-                            value={formData.height_inches}
-                            onChange={handleChange}
-                            min="0"
-                            max="11"
-                            placeholder="in"
-                          />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Blood Pressure</label>
-                      <input
-                        type="text"
-                        name="blood_pressure"
-                        value={formData.blood_pressure}
-                        onChange={handleChange}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Blood Glucose</label>
-                      <input
-                        type="text"
-                        name="blood_glucose"
-                        value={formData.blood_glucose}
-                        onChange={handleChange}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {currentStep === 3 && (
-                <div className="form-section">
-                  <h3>Medical History</h3>
-                  <div className="form-group">
-                    <label>Allergies</label>
-                    <textarea
-                      name="allergies"
-                      value={formData.allergies}
-                      onChange={handleChange}
-                      placeholder="List any allergies..."
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Chronic Conditions</label>
-                    <textarea
-                      name="chronic_conditions"
-                      value={formData.chronic_conditions}
-                      onChange={handleChange}
-                      placeholder="List any chronic conditions..."
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Current Medications</label>
-                    <textarea
-                      name="medications"
-                      value={formData.medications}
-                      onChange={handleChange}
-                      placeholder="List current medications..."
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>Past Surgeries</label>
-                    <textarea
-                      name="past_surgeries"
-                      value={formData.past_surgeries}
-                      onChange={handleChange}
-                      placeholder="List any past surgeries..."
-                    />
-                  </div>
-                </div>
-              )}
+              {renderFormStep()}
             </div>
 
-            <div className="form-actions">
+            <div className="form-navigation">
               {currentStep > 1 && (
-                <button type="button" onClick={prevStep} className="nav-btn back-btn">
-                  Back
+                <button type="button" onClick={prevStep}>
+                  Previous
                 </button>
               )}
-              
-              {currentStep === 3 ? (
-                <button 
-                  type="button" 
-                  onClick={registerUser} 
-                  className="submit-btn"
-                  disabled={!formData.first_name || !formData.last_name || !formData.primary_email || !formData.primary_contact || !formData.password || !formData.confirm_password || !formData.date_of_birth || !formData.aadhar_ssn}
-                >
-                  Create Account
-                </button>
-              ) : (
-                <button 
-                  type="button" 
-                  onClick={nextStep} 
-                  className="nav-btn next-btn"
-                  disabled={currentStep === 1 && (!formData.first_name || !formData.last_name || !formData.primary_email || !formData.primary_contact || !formData.password || !formData.confirm_password || !formData.date_of_birth || !formData.aadhar_ssn)}
-                >
+              {currentStep < 3 ? (
+                <button type="button" onClick={nextStep}>
                   Next
                 </button>
+              ) : (
+                <button type="button" onClick={registerUser}>
+                  Register
+                </button>
               )}
-
-              <p className="login-link">
-                Already have an account? <a href="/login">Sign in</a>
-              </p>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  ) : role === 'doctor' ? (
-    <div className="register-page">
-      <div className="register-container">
-        <div className="register-form-wrapper">
-          <div className="form-header">
-            <h1>Create Doctor Account</h1>
-          </div>
-
-          <form className="registration-form" onSubmit={e => e.preventDefault()}>
-            <div className="form-sections">
-              <div className="form-section">
-                <h3>Personal Information</h3>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>First Name *</label>
-                    <input 
-                      type="text" 
-                      name="first_name"
-                      value={formData.first_name}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Last Name *</label>
-                    <input 
-                      type="text"
-                      name="last_name"
-                      value={formData.last_name}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Date of Birth *</label>
-                    <input
-                      type="date"
-                      name="date_of_birth"
-                      value={formData.date_of_birth}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Contact Number *</label>
-                    <input
-                      type="tel"
-                      name="primary_contact"
-                      value={formData.primary_contact}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Email Address *</label>
-                  <input
-                    type="email"
-                    name="primary_email"
-                    value={formData.primary_email}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Password *</label>
-                    <input
-                      type="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Confirm Password *</label>
-                    <input
-                      type="password"
-                      name="confirm_password"
-                      value={formData.confirm_password}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Medical License Number *</label>
-                  <input
-                    type="text"
-                    name="aadhar_ssn"
-                    value={formData.aadhar_ssn}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="form-actions">
-              <button 
-                type="button" 
-                onClick={registerUser} 
-                className="submit-btn"
-                disabled={!formData.first_name || !formData.last_name || !formData.primary_email || !formData.primary_contact || !formData.password || !formData.confirm_password || !formData.date_of_birth || !formData.aadhar_ssn}
-              >
-                Create Account
-              </button>
-
-              <p className="login-link">
-                Already have an account? <a href="/login">Sign in</a>
-              </p>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <style jsx>{`
-        .register-page {
-          min-height: 100vh;
-          display: flex;
-          justify-content: center;
-          align-items: flex-start;
-          background-color: #f5f5f5;
-          padding: 40px 20px;
-          overflow-y: auto;
-          position: relative;
-        }
-
-        .register-container {
-          width: 100%;
-          max-width: 800px;
-          background: white;
-          border-radius: 8px;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-          padding: 30px;
-          margin: auto;
-        }
-
-        @media (max-height: 800px) {
-          .register-page {
-            padding: 20px;
-            height: auto;
-            min-height: 100%;
-          }
-          
-          .register-container {
-            margin: 0 auto;
-          }
-        }
-
-        .form-header {
-          text-align: center;
-          margin-bottom: 20px;
-        }
-
-        .form-header h1 {
-          font-size: 24px;
-          margin-bottom: 10px;
-        }
-
-        .form-header p {
-          font-size: 14px;
-          color: #666;
-        }
-
-        .form-sections {
-          margin-bottom: 20px;
-        }
-
-        .form-section {
-          margin-bottom: 20px;
-        }
-
-        .form-section h3 {
-          font-size: 18px;
-          margin-bottom: 10px;
-        }
-
-        .form-row {
-          display: flex;
-          gap: 20px;
-        }
-
-        .form-group {
-          flex: 1;
-        }
-
-        .form-group label {
-          display: block;
-          margin-bottom: 5px;
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-          width: 100%;
-          padding: 10px;
-          border: 1px solid #ccc;
-          border-radius: 4px;
-        }
-
-        .form-actions {
-          text-align: center;
-        }
-
-        .nav-btn {
-          padding: 10px 20px;
-          border: none;
-          border-radius: 4px;
-          background-color: #007bff;
-          color: white;
-          cursor: pointer;
-          margin-right: 10px;
-        }
-
-        .back-btn {
-          background-color: #6c757d;
-        }
-
-        .submit-btn {
-          background-color: #28a745;
-        }
-
-        .submit-btn:disabled {
-          background-color: #ccc;
-          cursor: not-allowed;
-        }
-
-        .login-link {
-          margin-top: 20px;
-          font-size: 14px;
-        }
-
-        .login-link a {
-          color: #007bff;
-          text-decoration: none;
-        }
-
-        input:focus {
-          outline: none;
-          border-color: #007bff;
-          box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
-        }
-      `}</style>
-    </div>
-  ) : (
-    <div className="register-page">
-      <div className="register-container">
-        <div className="register-form-wrapper">
-          <div className="form-header">
-            <h1>Create Paramedic Account</h1>
-          </div>
-
-          <form className="registration-form" onSubmit={e => e.preventDefault()}>
-            <div className="form-sections">
-              <div className="form-section">
-                <h3>Personal Information</h3>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>First Name *</label>
-                    <input 
-                      type="text" 
-                      name="first_name"
-                      value={formData.first_name}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Last Name *</label>
-                    <input 
-                      type="text"
-                      name="last_name"
-                      value={formData.last_name}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Date of Birth *</label>
-                    <input
-                      type="date"
-                      name="date_of_birth"
-                      value={formData.date_of_birth}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Contact Number *</label>
-                    <input
-                      type="tel"
-                      name="primary_contact"
-                      value={formData.primary_contact}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Email Address *</label>
-                  <input
-                    type="email"
-                    name="primary_email"
-                    value={formData.primary_email}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Password *</label>
-                    <input
-                      type="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Confirm Password *</label>
-                    <input
-                      type="password"
-                      name="confirm_password"
-                      value={formData.confirm_password}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>aadhar/ssn *</label>
-                  <input
-                    type="text"
-                    name="aadhar_ssn"
-                    value={formData.aadhar_ssn}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="form-actions">
-              <button 
-                type="button" 
-                onClick={registerUser} 
-                className="submit-btn"
-                disabled={!formData.first_name || !formData.last_name || !formData.primary_email || !formData.primary_contact || !formData.password || !formData.confirm_password || !formData.date_of_birth || !formData.aadhar_ssn}
-              >
-                Create Account
-              </button>
-
-              <p className="login-link">
-                Already have an account? <a href="/login">Sign in</a>
-              </p>
             </div>
           </form>
         </div>

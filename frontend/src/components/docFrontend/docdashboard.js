@@ -2,53 +2,74 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import './docuser.css';
+import Settings from '../overlays/Settings';
+import UpdateProfile from '../overlays/UpdateProfile';
+import SecureImage from '../common/SecureImage'; 
+import AccountSecurity from '../overlays/AccountSecurity';
 
 const DocDashboard = () => {
-    const [doctorData, setDoctorData] = useState(null);
-    const [error, setError] = useState(null);
-    const [loading, setLoading] = useState(true);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
+    const [showUpdateProfile, setShowUpdateProfile] = useState(false); 
+    const [showAccountSecurity, setAccountSecurity] = useState(false);
+    const [previewUrl, setPreviewUrl] = useState('/default-profile.png');
+    const [doctorData, setDoctorData] = useState(null);
+    const [error] = useState(null);
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
     useEffect(() => {
         const fetchDoctorData = async () => {
+            console.log('Fetching doctor data...');
             try {
                 const token = localStorage.getItem('token');
                 if (!token) {
-                    throw new Error('No token found');
+                    console.log('No token found, navigating to login...');
+                    navigate('/login');
+                    return;
                 }
-
-                console.log('Fetching with token:', token); // Debug log
-
-                const response = await axios.get('http://localhost:5000/doc/docDashboard', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
+        
+                const response = await axios.get('http://127.0.0.1:5000/doc/docDashboard', {
+                  withCredentials: true,
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  }
                 });
+                // Set profile pic URL from response
+                // const profilePicUrl = response.data.profile_pic ? 
+                //   `http://127.0.0.1:5000${response.data.profile_pic}` :
+                //   '/default-profile.png';
+        
+                setDoctorData({
+                  ...response.data,
+                  profile_pic: response.data.profile_pic ? `http://127.0.0.1:5000${response.data.profile_pic}` :'/default-profile.png',
+                  first_name: response.data.name,
+                  last_name: response.data.last_name,
+                  primary_contact: response.data.primary_contact,
+                  email: response.data.email,
+                  upcomingAppointments: response.data.upcomingAppointments,
+                  recentPrescriptions:response.data.recentPrescriptions,
+                  dob:response.data.dob
 
-                // Access data from response.data
-                const responseData = response.data;
-                console.log('Response data:', responseData);
-
-                if (!responseData) {
-                    throw new Error('No data received from server');
+                });
+                if (response.data.profile_pic) {
+                  setPreviewUrl(response.data.profile_pic);
+                } else {
+                  setPreviewUrl('/default-profile.png');
                 }
-
-                // Set the doctor data directly from response.data
-                setDoctorData(responseData);
-
-            } catch (err) {
-                console.error('Error details:', {
-                    message: err.message,
-                    response: err.response,
-                    data: err.response?.data
-                });
-                setError(err.response?.data?.error || err.message || 'An error occurred');
-            } finally {
+        
+              } catch (error) {
+                console.error('Error fetching patient data:', error);
+                if (error.response && error.response.status === 401) {
+                  localStorage.removeItem('token');  // Clear invalid token
+                  navigate('/login');
+                }
+              } finally {
                 setLoading(false);
-            }
-        };
+                console.log('Loading state set to false');
+              }
+            };
 
         fetchDoctorData();
     }, []);
@@ -63,15 +84,32 @@ const DocDashboard = () => {
         }
     };
     const handleSettingsClick = () => {
-        navigate('/settings');
+        setShowSettings(true);
       };
+    const handleAccountSettingsClick = () => {
+        setShowUpdateProfile(true);  // Updated function to use new state variable name
+      };
+    const handleAccountSecurityClick =() =>{
+        setShowProfileMenu(false);
+        setAccountSecurity(true);
+    }
+    const closeSettings = () => {
+        setShowSettings(false);
+    };
+
+    const closeUpdateProfile = () => {
+        setShowUpdateProfile(false);
+    };
+    const closeAccountSecurity = () => {
+      setAccountSecurity(false);
+  };
 
     if (loading) {
-        return <div className="loading">Loading...</div>;
+        return <div>Loading...</div>;
     }
 
     if (error) {
-        return <div className="error-message">Error: {error}</div>;
+        return <div>{error}</div>;
     }
 
     if (!doctorData) {
@@ -87,21 +125,28 @@ const DocDashboard = () => {
         </div>
         <div className="header-right">
           <div className="profile-section">
-            <button 
-              className="profile-button"
+          <button 
+              className="profile-button1"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
             >
-              <img 
-                src="" 
+              <SecureImage 
+                src={previewUrl}
                 alt="Profile" 
-                className="profile-icon"
+                style={{ 
+                  width: '80px', 
+                  height: '80px', 
+                  borderRadius: '50%', 
+                  objectFit: 'cover',
+                  border: '2px solid #fff'  // Optional: adds a white border around the image
+                }}
               />
             </button>
             {showProfileMenu && (
               <div className="profile-menu">
-                <button onClick={handleSettingsClick}>Settings</button>
-                <button onClick={() => navigate('/preferences')}>Preferences</button>
-                <button onClick={handleLogout}>Logout</button>
+                <button onClick={() => { handleSettingsClick(); setShowProfileMenu(false); }}>Settings</button>
+                <button onClick={() => { handleAccountSettingsClick(); setShowProfileMenu(false); }}>Account Preferences</button>
+                <button onClick={() => { handleAccountSecurityClick(); setShowProfileMenu(false); }}>Account Security</button>
+                <button onClick={() => { handleLogout(); setShowProfileMenu(false); }}>Logout</button>
               </div>
             )}
           </div>
@@ -115,17 +160,32 @@ const DocDashboard = () => {
                     <div className="info-grid">
                         <div className="info-item">
                             <label>Name:</label>
-                            <span>{`${doctorData.first_name || 'N/A'} ${doctorData.last_name || 'N/A'}`}</span>
+                            <span>{`${doctorData.first_name} ${doctorData.last_name}`}</span>
                         </div>
                         <div className="info-item">
                             <label>Email:</label>
-                            <span>{doctorData.primary_email || 'N/A'}</span>
+                            <span>{doctorData.email || 'N/A'}</span>
                         </div>
                         <div className="info-item">
                             <label>Contact:</label>
                             <span>{doctorData.primary_contact || 'N/A'}</span>
                         </div>
-                        {doctorData.specialization && (
+                        </div>
+                        <div className="info-grid">
+                        <div className="info-item">
+                            <label>upcoming Appointments:</label>
+                            <span>{doctorData.upcomingAppointments || 'N/A'}</span>
+                        </div>
+                        <div className="info-item">
+                            <label>DoB:</label>
+                            <span>{doctorData.dob || 'N/A'}</span>
+                        </div>
+                        <div className="info-item">
+                            <label>recentPrescriptions:</label>
+                            <span>{doctorData.recentPrescriptions || 'N/A'}</span>
+                        </div>
+
+                        {/* {doctorData.specialization && (
                             <div className="info-item">
                                 <label>Specialization:</label>
                                 <span>{doctorData.specialization}</span>
@@ -148,10 +208,21 @@ const DocDashboard = () => {
                                 <label>Availability:</label>
                                 <span>{doctorData.availability}</span>
                             </div>
-                        )}
+                        )} */}
                     </div>
                 </div>
             </div>
+            {/* Settings Modal */}
+      {showSettings && (
+        <Settings onClose={closeSettings} />
+      )}
+      {/* UpdateProfile Modal */}
+      {showUpdateProfile && (  // Updated condition
+        <UpdateProfile onClose={closeUpdateProfile} />  // Updated handler
+      )}
+       {showAccountSecurity && (
+                <AccountSecurity onClose={closeAccountSecurity} />
+            )}
         </div>
     );
 };
