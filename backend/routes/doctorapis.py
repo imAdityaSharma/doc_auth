@@ -14,32 +14,46 @@ doctor_bp = Blueprint('doctor', __name__)
 @token_required
 def docDashboard():
     # Get the Authorization header
-    token = request.headers['Authorization'].split(" ")[1]
-    data = jwt.decode(token, str(current_app.config['SECRET_KEY']), algorithms=["HS256"])
-    doctor_id = data['user_id']
-    
-    # Query the doctor's appointments
     try:
-        doctor = BaseUser.query.filter_by(id=doctor_id).first()
+        # Get token from header
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({"error": "No token provided"}), 401
         
-        if not doctor:
-            return jsonify({"error": "Doctor not found"}), 404
+        token = auth_header.split(" ")[1]
+        
+        try:
+            # Verify token
+            data = jwt.decode(token, str(current_app.config['SECRET_KEY']), algorithms=["HS256"])
+            current_user = Doctor.query.get(data['user_id'])
+            
+            if not current_user:
+                return jsonify({"error": "User not found"}), 404
 
-        doctor_data = {
-            "id": doctor.id,
-            "first_name": doctor.first_name,
-            "last_name": doctor.last_name,
-            "primary_email": doctor.primary_email,
-            "primary_contact": doctor.primary_contact,
-            # "specialization": doctor.specialization,
-            # "experience": doctor.experience,
-            # "hospital": doctor.hospital,
-            # "availability": doctor.availability
+        except jwt.ExpiredSignatureError:
+            return jsonify({"error": "Token has expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"error": "Invalid token"}), 401
+
+        doc_data = {
+            "first_name": current_user.first_name,
+            "last_name":current_user.last_name,
+            "email": current_user.primary_email,
+            "role": current_user.role,
+            "primary_contact":current_user.primary_contact,
+            "dob":current_user.date_of_birth,
+            "upcomingAppointments": [],  # Query appointments table
+            "recentPrescriptions": []    # Query prescriptions table
         }
-        response = jsonify(doctor_data)
+        
+        response = jsonify(doc_data)
         response.headers.add('Access-Control-Allow-Origin', 'http://127.0.0.1:3000')
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response, 200
+        
+    except Exception as e:
+        print(f"Dashboard error: {str(e)}")
+        return jsonify({"error": "Failed to fetch dashboard data"}), 500
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

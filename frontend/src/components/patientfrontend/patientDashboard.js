@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import './patientuser.css';
+import './styles/patientuser.css';
 import Settings from '../overlays/Settings';
+import UpdateProfile from '../overlays/UpdateProfile';
+import SecureImage from '../common/SecureImage'; 
 
 export default function PatientDashboard() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showUpdateProfile, setShowUpdateProfile] = useState(false); 
+  const [previewUrl, setPreviewUrl] = useState('/default-profile.png');
   const navigate = useNavigate();
   const [patientData, setPatientData] = useState({
     name: "",
     age: null,
+    profile_pic: '/default-profile.png',
     upcomingAppointments: [],
     recentPrescriptions: []
   });
@@ -31,7 +36,21 @@ export default function PatientDashboard() {
             'Authorization': `Bearer ${token}`
           }
         });
-        setPatientData(response.data);
+        // Set profile pic URL from response
+        // const profilePicUrl = response.data.profile_pic ? 
+        //   `http://127.0.0.1:5000${response.data.profile_pic}` :
+        //   '/default-profile.png';
+
+        setPatientData({
+          ...response.data,
+          profile_pic: response.data.profile_pic ? `http://127.0.0.1:5000${response.data.profile_pic}` :'/default-profile.png'
+        });
+        if (response.data.profile_pic) {
+          setPreviewUrl(response.data.profile_pic);
+        } else {
+          setPreviewUrl('/default-profile.png');
+        }
+
       } catch (error) {
         console.error('Error fetching patient data:', error);
         if (error.response && error.response.status === 401) {
@@ -48,6 +67,9 @@ export default function PatientDashboard() {
 
   const handleSettingsClick = () => {
     setShowSettings(true);
+  };
+  const handleAccountSettingsClick = () => {
+    setShowUpdateProfile(true);  // Updated function to use new state variable name
   };
 
   const handleLogout = async () => {
@@ -77,20 +99,26 @@ export default function PatientDashboard() {
         <div className="header-right">
           <div className="profile-section">
             <button 
-              className="profile-button"
+              className="profile-button1"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
             >
-              <img 
-                src="" 
+              <SecureImage 
+                src={previewUrl}
                 alt="Profile" 
-                className="profile-icon"
+                style={{ 
+                  width: '80px', 
+                  height: '80px', 
+                  borderRadius: '50%', 
+                  objectFit: 'cover',
+                  border: '2px solid #fff'  // Optional: adds a white border around the image
+                }}
               />
             </button>
             {showProfileMenu && (
               <div className="profile-menu">
-                <button onClick={handleSettingsClick}>Settings</button>
-                <button onClick={() => navigate('/preferences')}>Preferences</button>
-                <button onClick={handleLogout}>Logout</button>
+                <button onClick={() => { handleSettingsClick(); setShowProfileMenu(false); }}>Settings</button>
+                <button onClick={() => { handleAccountSettingsClick(); setShowProfileMenu(false); }}>Account Preferences</button>
+                <button onClick={() => { handleLogout(); setShowProfileMenu(false); }}>Logout</button>
               </div>
             )}
           </div>
@@ -163,6 +191,10 @@ export default function PatientDashboard() {
       {/* Settings Modal */}
       {showSettings && (
         <Settings onClose={() => setShowSettings(false)} />
+      )}
+      {/* UpdateProfile Modal */}
+      {showUpdateProfile && (  // Updated condition
+        <UpdateProfile onClose={() => setShowUpdateProfile(false)} />  // Updated handler
       )}
     </div>
   );

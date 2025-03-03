@@ -10,8 +10,6 @@ import PatientDashboard from './components/patientfrontend/patientDashboard'
 import DocDashboard from './components/docFrontend/docdashboard'
 import ParaDashboard from './components/paraFrontend/paraDashboard'
 import { AuthProvider } from './contexts/AuthContext';
-import Settings from './components/overlays/Settings';
-// import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (   
@@ -25,14 +23,7 @@ function App() {
             <Route path="/puser/dashboard" element={<PatientDashboard />} />
             <Route path="/doc/docDashboard" element={<DocDashboard />} />
             <Route path="/para/paraDashboard" element={<ParaDashboard />} />
-            <Route 
-              path="/settings" 
-              element={
-                
-                  <Settings />
-                
-              } 
-            />
+            
         </Routes>
       </BrowserRouter>
     </AuthProvider>

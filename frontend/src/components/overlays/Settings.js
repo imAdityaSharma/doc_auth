@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import './Settings.css';
+import './styles/Settings.css';
 
 const Settings = ({ onClose }) => {
   const { userRole } = useAuth();

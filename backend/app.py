@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request, session
 from flask_cors import CORS
 # from authlib.integrations.flask_client import OAuth
+from flask import send_from_directory, make_response
 from datetime import datetime, timedelta, timezone
 from flask_login import LoginManager, login_user
 from database import db, create_app
@@ -18,6 +19,7 @@ import os
 import json
 from flask_cors import cross_origin
 from decorators import pre_flight_cors
+from decorators import token_required
 
 app = create_app()
 bcrypt_var = Bcrypt(app) 
@@ -67,7 +69,6 @@ email_server = EmailServer()
 @login_manager.user_loader
 def load_user(user_id):
     return BaseUser.query.get(int(user_id))
-
 
 @app.route("/send-verification", methods=["POST", "OPTIONS"])
 def send_verification():
@@ -368,6 +369,36 @@ def check_session():
     except Exception as e:
         print(f"Session check error: {str(e)}")
         return jsonify({"authenticated": False, "error": str(e)}), 500
+    
+
+@app.route('/uploads/<path:filename>')
+@token_required
+def uploaded_file(filename):
+    try:
+        if '..' in filename or filename.startswith('/'):
+            return jsonify({"error": "Invalid file path"}), 403
+            
+        if not filename.startswith('profile_pics/'):
+            return jsonify({"error": "Access denied"}), 403
+
+        # Get the file path
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        # Check if file exists
+        if not os.path.exists(file_path):
+            return jsonify({"error": "File not found"}), 404
+
+        # Send file with cache control headers
+        response = make_response(send_from_directory(app.config['UPLOAD_FOLDER'], filename))
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+
+    except Exception as e:
+        print(f"Error serving file: {str(e)}")
+        return jsonify({"error": "File not found"}), 404
+
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)

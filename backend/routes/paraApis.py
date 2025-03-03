@@ -13,32 +13,43 @@ para_bp = Blueprint('paramedic', __name__)
 @token_required
 def paraDashboard():
     # Get the Authorization header
-    token = request.headers['Authorization'].split(" ")[1]
-    data = jwt.decode(token, str(current_app.config['SECRET_KEY']), algorithms=["HS256"])
-    paramedic_id = data['user_id']
-    
-    # Query the doctor's appointments
     try:
-        paramedic = BaseUser.query.filter_by(id=paramedic_id).first()
+        # Get token from header
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({"error": "No token provided"}), 401
         
-        if not paramedic:
-            return jsonify({"error": "Paramedic not found"}), 404
+        token = auth_header.split(" ")[1]
+        
+        try:
+            # Verify token
+            data = jwt.decode(token, str(current_app.config['SECRET_KEY']), algorithms=["HS256"])
+            current_user = Paramedic.query.get(data['user_id'])
+            
+            if not current_user:
+                return jsonify({"error": "User not found"}), 404
 
-        paramedic_data = {
-            "id": paramedic.id,
-            "first_name": paramedic.first_name,
-            "last_name": paramedic.last_name,
-            "primary_email": paramedic.primary_email,
-            "primary_contact": paramedic.primary_contact,
-            # "specialization": doctor.specialization,
-            # "experience": doctor.experience,
-            # "hospital": doctor.hospital,
-            # "availability": doctor.availability
+        except jwt.ExpiredSignatureError:
+            return jsonify({"error": "Token has expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"error": "Invalid token"}), 401
+
+        patient_data = {
+            "name": f"{current_user.first_name} {current_user.last_name}",
+            "email": current_user.primary_email,
+            "role": current_user.role,
+            "upcomingAppointments": [],  # TODO: Query appointments table
+            "recentPrescriptions": []  # TODO: Query prescriptions table
         }
-        response = jsonify(paramedic_data)
+        
+        response = jsonify(patient_data)
         response.headers.add('Access-Control-Allow-Origin', 'http://127.0.0.1:3000')
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response, 200
+        
+    except Exception as e:
+        print(f"Dashboard error: {str(e)}")
+        return jsonify({"error": "Failed to fetch dashboard data"}), 500
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

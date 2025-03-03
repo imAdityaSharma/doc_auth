@@ -1,0 +1,168 @@
+/* Overlay container */
+.settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 20px;  /* Add padding to ensure modal doesn't touch screen edges */
+}
+
+.settings-modal {
+  background: white;
+  padding: 32px;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 800px;  /* Increased max-width for better content display */
+  max-height: 90vh;  /* Limit height to 90% of viewport height */
+  position: relative;
+  z-index: 10000;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;  /* Stack children vertically */
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f0f0f0;
+  flex-shrink: 0;  /* Prevent header from shrinking */
+}
+
+.settings-content {
+  flex-grow: 1;  /* Allow content to grow */
+  overflow-y: auto;  /* Enable vertical scrolling */
+  padding-right: 16px;  /* Add space for scrollbar */
+  margin-right: -16px;  /* Offset padding to align with header */
+}
+
+/* Scrollbar styling */
+.settings-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.settings-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.settings-content::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.settings-content::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Form sections styling */
+.settings-section {
+  margin-bottom: 25px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.setting-item {
+  margin-bottom: 15px;
+}
+
+/* Input styling */
+.setting-item input,
+.setting-item textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.setting-item input:focus,
+.setting-item textarea:focus {
+  border-color: #4CAF50;
+  outline: none;
+}
+
+.setting-item textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* Actions section */
+.settings-actions {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px solid #f0f0f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-shrink: 0;  /* Prevent actions from shrinking */
+}
+
+/* Success/Error message styling */
+.setting-item.success,
+.setting-item.error {
+  padding: 12px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.setting-item.success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #a5d6a7;
+}
+
+.setting-item.error {
+  background-color: #ffebee;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+}
+
+/* Profile picture section */
+.profile-pic-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.profile-pic-preview {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #4CAF50;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .settings-modal {
+    width: 95%;
+    padding: 20px;
+    max-height: 95vh;
+  }
+
+  .settings-actions {
+    flex-direction: column;
+  }
+
+  .settings-actions button {
+    width: 100%;
+  }
+
+  .setting-item {
+    padding: 10px;
+  }
+}

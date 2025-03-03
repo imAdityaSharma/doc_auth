@@ -14,7 +14,8 @@ def create_app():
     # PostgreSQL Database URI
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://Admin:Admin@db:5432/MaxRayUsers')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
+    app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'uploads')
+    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 # 16MB max-limit
     db.init_app(app)
     migrate = Migrate(app, db) # Initialize Flask-Migrate for updating database schema
 
