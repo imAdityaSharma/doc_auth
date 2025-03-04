@@ -33,7 +33,7 @@ app.config.update(
     SESSION_TYPE='redis',
     SESSION_REDIS=redis.from_url(redis_url),
     SESSION_KEY_PREFIX='session:',
-    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=1),
     SECRET_KEY='987qwert65fyhh',
     SESSION_COOKIE_NAME='session_id',
     SESSION_COOKIE_HTTPONLY=True,
@@ -355,23 +355,71 @@ def logout():
     if request.method == "OPTIONS":
         return pre_flight_cors()
 
-    session.clear()
-    response = jsonify({"message": "Successfully logged out"})
-   
-    return response, 200
+    try:
+        # Get session ID from cookie
+        session_id = request.cookies.get('session_id')
+        
+        # Get user info before clearing session
+        user_id = session.get('user_id')
+        email = session.get('email')
+
+        # Clear Flask session
+        session.clear()
+
+        # Clear Redis session using session ID
+        if session_id:
+            redis_key = f"session:{session_id}"
+            redis_client.delete(redis_key)
+            print(f"Deleted Redis session key: {redis_key}")
+
+        # Clear all sessions for this user (optional, if you want to logout from all devices)
+        if user_id:
+            user_sessions_pattern = f"*{user_id}*"
+            for key in redis_client.scan_iter(match=user_sessions_pattern):
+                redis_client.delete(key)
+                print(f"Deleted additional Redis key: {key}")
+
+        # Clear any email verification data
+        if email:
+            redis_client.delete(f"verification:{email}")
+            redis_client.delete(f"verified:{email}")
+
+        # Prepare response
+        response = jsonify({
+            "status": "success",
+            "message": "Successfully logged out"
+        })
+
+        # Clear cookies
+        response.delete_cookie('session_id', path='/', domain=None)
+        response.delete_cookie('remember_token', path='/', domain=None)
+        
+        # Set CORS headers
+        response.headers.update({
+            'Access-Control-Allow-Origin': request.origin or 'http://127.0.0.1:3000',
+            'Access-Control-Allow-Credentials': 'true'
+        })
+
+        print("Logout successful")
+        return response, 200
+
+    except Exception as e:
+        print(f"Logout error: {str(e)}")
+        # Try to clear session even if there's an error
+        try:
+            session.clear()
+        except:
+            pass
+        
+        return jsonify({
+            "status": "error",
+            "message": "Error during logout"
+        }), 500
 
 @app.route("/check-session", methods=['GET', 'OPTIONS'])
 def check_session():
     if request.method == "OPTIONS":
-        response = jsonify({"success": True})
-        origin = request.headers.get('Origin')
-        if origin in ALLOWED_ORIGINS:
-            response.headers['Access-Control-Allow-Origin'] = origin
-            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials'
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-            response.headers['Access-Control-Max-Age'] = '120'
-        return response, 200
+        return pre_flight_cors()
 
     try:
         # Check if user is logged in via session

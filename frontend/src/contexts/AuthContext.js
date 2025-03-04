@@ -25,9 +25,12 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       setIsLoading(true);
-      await axiosInstance.post('/logout');
+      await axiosInstance.post('/logout', {}, { withCredentials: true });
       setIsAuthenticated(false);
       setUserRole(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      sessionStorage.clear();
     } catch (error) {
       console.error('Logout error:', error);
     } finally {

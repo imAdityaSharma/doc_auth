@@ -187,59 +187,57 @@ const UpdateProfile = ({ onClose }) => {
     setLoading(true);
     setMessage('');
 
-    // Check if email is verified before submitting
-    if (!isEmailVerified) {
-      setMessage('Please verify your email before saving changes.');
-      setLoading(false);
-      return;
+    // Check if email verification is needed
+    if (profileData.primary_email !== originalEmail && !isEmailVerified) {
+        setMessage('Please verify your new email address before saving changes.');
+        setLoading(false);
+        return;
     }
 
     try {
-      const formData = new FormData();
-      
-      // Debug log
-      console.log('Profile data being sent:', profileData);
-      
-      // Explicitly add each field to formData
-      formData.append('first_name', profileData.first_name);
-      formData.append('last_name', profileData.last_name);
-      formData.append('primary_email', profileData.primary_email);
-      formData.append('primary_contact', profileData.primary_contact);
-      formData.append('date_of_birth', profileData.date_of_birth);
-      formData.append('house_no', profileData.house_no);
-      formData.append('apartment', profileData.apartment);
-      formData.append('colony', profileData.colony);
-      formData.append('city', profileData.city);
-      formData.append('pin_code', profileData.pin_code);
-      formData.append('state', profileData.state);
+        const formData = new FormData();
+        
+        // Add all profile data fields
+        Object.keys(profileData).forEach(key => {
+            if (profileData[key] !== null && profileData[key] !== undefined) {
+                formData.append(key, profileData[key]);
+            }
+        });
 
-      // Add profile pic if it exists
-      if (profilePic) {
-        formData.append('profile_pic', profilePic);
-      }
+        // Add profile pic if it exists
+        if (profilePic) {
+            formData.append('profile_pic', profilePic);
+        }
 
-      // Debug log
-      for (let pair of formData.entries()) {
-        console.log(pair[0] + ': ' + pair[1]); 
-      }
+        console.log('Sending profile data:', Object.fromEntries(formData));  // Debug log
 
-      // const response = await axiosInstance.post('/puser/profile_update', formData, {
-      //   headers: {
-      //     'Content-Type': 'multipart/form-data',
-      //   },
-      // });
+        const response = await axiosInstance.post('/comms/profile_update', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
 
-      setMessage('Profile updated successfully!');
-      setTimeout(() => {
-        if (onClose) onClose();
-      }, 2000);
+        console.log('Profile update response:', response.data);  // Debug log
+
+        if (response.data.user) {
+            // Update local state with new data
+            setProfileData(prevData => ({
+                ...prevData,
+                ...response.data.user
+            }));
+        }
+
+        setMessage('Profile updated successfully!');
+        setTimeout(() => {
+            if (onClose) onClose();
+        }, 2000);
     } catch (error) {
-      console.error('Error updating profile:', error);
-      setMessage(error.response?.data?.error || 'Failed to update profile. Please try again.');
+        console.error('Error updating profile:', error);
+        setMessage(error.response?.data?.error || 'Failed to update profile. Please try again.');
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
 
   if (loading) {
     return <div className="settings-overlay">
