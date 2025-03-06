@@ -95,8 +95,8 @@ def health_metrics():
         
         print ("data updater 1")
         # Process basic health metrics
-        current_user.weight = profile_data.get('weight', current_user.weight)
-        current_user.height = profile_data.get('height', current_user.height)
+        current_user.weight = float(profile_data.get('weight', current_user.weight))
+        current_user.height = float(profile_data.get('height', current_user.height))
         current_user.blood_pressure = profile_data.get('bloodPressure', current_user.blood_pressure)
         current_user.blood_glucose = profile_data.get('bloodGlucose', current_user.blood_glucose)
         
@@ -158,7 +158,7 @@ def health_metrics():
             return jsonify({
                 "message": "Health metrics updated successfully",
                 "user": {
-                    "weight": current_user.weight,
+                    # "weight": current_user.weight,
                     "height": current_user.height,
                     "bloodPressure": current_user.blood_pressure,
                     "bloodGlucose": current_user.blood_glucose,

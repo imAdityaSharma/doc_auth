@@ -112,18 +112,18 @@ class Patient(BaseUser):
     id = db.Column(db.Integer, db.ForeignKey("base_users.id"), primary_key=True)
     
     # Medical History
-    allergies = db.Column(db.Text)  # JSON list of allergies
-    chronic_conditions = db.Column(db.Text)  # JSON list of conditions
-    medications = db.Column(db.Text)  # JSON list of current medications
-    past_surgeries = db.Column(db.Text)  # JSON list of past surgeries
-    medical_docs = db.Column(db.Text)  # URLs to past medical documents (optional)
+    allergies = db.Column(db.Text,default='')  # JSON list of allergies
+    chronic_conditions = db.Column(db.Text,default='')  # JSON list of conditions
+    medications = db.Column(db.Text,default='')  # JSON list of current medications
+    past_surgeries = db.Column(db.Text,default='')  # JSON list of past surgeries
+    medical_docs = db.Column(db.Text,default='')  # URLs to past medical documents (optional)
     
     # Health Metrics
-    weight = db.Column(db.Text)
-    height = db.Column(db.Text)
-    blood_pressure = db.Column(db.String(20))
-    blood_glucose = db.Column(db.String(20))
-    additional_metrics = db.Column(db.Text)  # JSON object for custom metrics
+    weight = db.Column(db.Float,default=0)
+    height = db.Column(db.Float,default=0)
+    blood_pressure = db.Column(db.String(20),default='')
+    blood_glucose = db.Column(db.String(20),default='')
+    additional_metrics = db.Column(db.Text,default='')  # JSON object for custom metrics
 
     __mapper_args__ = {
         'polymorphic_identity': 'patient'
@@ -137,22 +137,22 @@ class Doctor(BaseUser):
     
     # Professional Information
     medical_license = db.Column(db.String(50), unique=True, nullable=False)
-    specialty = db.Column(db.String(100))
-    years_experience = db.Column(db.Integer)
-    organization = db.Column(db.String(100))
+    specialty = db.Column(db.String(100),default='')
+    years_experience = db.Column(db.Integer,default=0)
+    organization = db.Column(db.String(100),default='')
 
     # Clinical Data
-    patient_list = db.Column(db.Text)  # JSON list of assigned patients
-    treatment_plans = db.Column(db.Text)  # JSON object for treatments & progress notes
-    lab_results = db.Column(db.Text)  # JSON list of lab reports
+    patient_list = db.Column(db.Text,default='')  # JSON list of assigned patients
+    treatment_plans = db.Column(db.Text,default='')  # JSON object for treatments & progress notes
+    lab_results = db.Column(db.Text,default='')  # JSON list of lab reports
 
     # Education & Training
-    medical_school = db.Column(db.String(100))
-    residency = db.Column(db.String(100))
-    continuing_education = db.Column(db.Text)  # JSON list of certifications
+    medical_school = db.Column(db.String(100),default='')
+    residency = db.Column(db.String(100),default='')
+    continuing_education = db.Column(db.Text,default='')  # JSON list of certifications
 
     # Availability
-    availability_schedule = db.Column(db.Text)  # JSON object with availability slots
+    availability_schedule = db.Column(db.Text,default='')  # JSON object with availability slots
 
     __mapper_args__ = {
         'polymorphic_identity': 'doctor'
@@ -166,17 +166,17 @@ class Paramedic(BaseUser):
     
     # Professional Information
     emt_certification_number = db.Column(db.String(50), unique=True, nullable=False)
-    years_experience = db.Column(db.Integer)
+    years_experience = db.Column(db.Integer,default=0)
 
     # Incident Data
-    emergency_responses = db.Column(db.Text)  # JSON list of emergencies responded to
-    patient_vitals = db.Column(db.Text)  # JSON object for vitals recorded
-    incident_reports = db.Column(db.Text)  # JSON list of reports
+    emergency_responses = db.Column(db.Text,default="")  # JSON list of emergencies responded to
+    patient_vitals = db.Column(db.Text,default="")  # JSON object for vitals recorded
+    incident_reports = db.Column(db.Text,default="")  # JSON list of reports
 
     # Training & Certifications
-    certification_level = db.Column(db.String(50))  # EMT-B, EMT-I, EMT-P
-    als_bls_training = db.Column(db.String(50))  # ALS/BLS training
-    additional_certifications = db.Column(db.Text)  # JSON list of certifications
+    certification_level = db.Column(db.String(50),default="")  # EMT-B, EMT-I, EMT-P
+    als_bls_training = db.Column(db.String(50),default="")  # ALS/BLS training
+    additional_certifications = db.Column(db.Text,default='')  # JSON list of certifications
 
     __mapper_args__ = {
         'polymorphic_identity': 'paramedic'

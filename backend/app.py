@@ -5,7 +5,7 @@ from flask import send_from_directory, make_response
 from datetime import datetime, timedelta, timezone
 from flask_login import LoginManager, login_user
 from database import db, create_app
-from Users import BaseUser
+from Users import BaseUser, Paramedic, Patient, Doctor
 import jwt
 from flask_bcrypt import Bcrypt 
 from utils.EmailServer import EmailServer
@@ -247,17 +247,41 @@ def register():
                 hashed_password = bcrypt_var.generate_password_hash(data['password']).decode('utf-8')
                 
                 # Create new user
-                new_user = BaseUser(
-                    first_name=data['first_name'],
-                    last_name=data['last_name'],
-                    primary_email=email,
-                    password_hash=hashed_password,
-                    role=data['role'],
-                    date_of_birth=date_of_birth,
-                    primary_contact=data['primary_contact'],
-                    aadhar_ssn=data['aadhar_ssn']
-                )
-                
+                if data['role']=='patient':
+                    new_user = Patient(
+                        first_name=data['first_name'],
+                        last_name=data['last_name'],
+                        primary_email=email,
+                        password_hash=hashed_password,
+                        role=data['role'],
+                        date_of_birth=date_of_birth,
+                        primary_contact=data['primary_contact'],
+                        aadhar_ssn=data['aadhar_ssn']
+                    )
+                elif data['role']=='Paramedic':
+                    new_user = Paramedic(
+                        first_name=data['first_name'],
+                        last_name=data['last_name'],
+                        primary_email=email,
+                        password_hash=hashed_password,
+                        role=data['role'],
+                        date_of_birth=date_of_birth,
+                        primary_contact=data['primary_contact'],
+                        aadhar_ssn=data['aadhar_ssn']
+                    )
+                elif data['role']=='Doctor':
+                    new_user = Doctor(
+                            first_name=data['first_name'],
+                            last_name=data['last_name'],
+                            primary_email=email,
+                            password_hash=hashed_password,
+                            role=data['role'],
+                            date_of_birth=date_of_birth,
+                            primary_contact=data['primary_contact'],
+                            aadhar_ssn=data['aadhar_ssn']
+                        )
+                else:
+                    return jsonify({"message":"invalid role"}), 404
 
                 
                 db.session.add(new_user)
