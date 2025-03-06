@@ -258,7 +258,7 @@ def register():
                         primary_contact=data['primary_contact'],
                         aadhar_ssn=data['aadhar_ssn']
                     )
-                elif data['role']=='Paramedic':
+                elif data['role']=='paramedic':
                     new_user = Paramedic(
                         first_name=data['first_name'],
                         last_name=data['last_name'],
@@ -267,9 +267,13 @@ def register():
                         role=data['role'],
                         date_of_birth=date_of_birth,
                         primary_contact=data['primary_contact'],
-                        aadhar_ssn=data['aadhar_ssn']
+                        aadhar_ssn=data['aadhar_ssn'],
+                        emt_certification_number=data['emt_license'],
+                        als_bls_training = data['als_bls_training'],
+                        years_experience=data['years_of_experience'],
+                        additional_certifications=data['additional_certifications'],
                     )
-                elif data['role']=='Doctor':
+                elif data['role']=='doctor':
                     new_user = Doctor(
                             first_name=data['first_name'],
                             last_name=data['last_name'],
