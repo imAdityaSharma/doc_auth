@@ -256,7 +256,10 @@ def register():
                         role=data['role'],
                         date_of_birth=date_of_birth,
                         primary_contact=data['primary_contact'],
-                        aadhar_ssn=data['aadhar_ssn']
+                        aadhar_ssn=data['aadhar_ssn'],
+                        weight=data['weight'],
+                        medications=data['medical_history'],
+                        allergies=data['allergies']
                     )
                 elif data['role']=='paramedic':
                     new_user = Paramedic(
@@ -282,7 +285,11 @@ def register():
                             role=data['role'],
                             date_of_birth=date_of_birth,
                             primary_contact=data['primary_contact'],
-                            aadhar_ssn=data['aadhar_ssn']
+                            aadhar_ssn=data['aadhar_ssn'],
+                            medical_license=data['license_number'],
+                            specialty=data['specialization'],
+                            years_experience=float(data['years_of_experience']),
+                            organization=data['hospital_affiliation'],
                         )
                 else:
                     return jsonify({"message":"invalid role"}), 404
@@ -310,7 +317,7 @@ def register():
                 
             except Exception as db_error:
                 db.session.rollback()
-                
+                print(db_error)
                 return jsonify({"error": "Database error occurred"}), 500
 
         except Exception as e:
