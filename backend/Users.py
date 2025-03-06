@@ -48,29 +48,17 @@ class BaseUser(UserMixin, db.Model):
     preferred_2fa_method = db.Column(db.String(20))  # 'app', 'sms', or 'email'
     
     # Verification Fields
-    email_verified = db.Column(db.Boolean, default=False)
-    email_verification_token = db.Column(db.String(100))
-    email_verification_sent_at = db.Column(db.DateTime)
     
     phone_verified = db.Column(db.Boolean, default=False)
-    phone_verification_code = db.Column(db.String(6))
-    phone_verification_sent_at = db.Column(db.DateTime)
     
     # Account Security
     failed_login_attempts = db.Column(db.Integer, default=0)
-    last_failed_login = db.Column(db.DateTime)
     account_locked_until = db.Column(db.DateTime)
-    password_changed_at = db.Column(db.DateTime)
 
     def __init__(self, **kwargs):
         super(BaseUser, self).__init__(**kwargs)
         if not self.two_factor_secret:
             self.two_factor_secret = pyotp.random_base32()
-
-    def set_password(self, password):
-        """Hashes and stores the password securely."""
-        self.password_hash = generate_password_hash(password)
-
 
     __mapper_args__ = {
         'polymorphic_identity': 'base_user',
@@ -103,45 +91,9 @@ class BaseUser(UserMixin, db.Model):
     #     self.backup_codes = json.dumps(codes)
     #     return codes
 
-    # Email Verification Methods
-
-    # Phone Verification Methods
-    # def generate_phone_verification_code(self):
-    #     """Generate a new phone verification code"""
-    #     import random
-    #     self.phone_verification_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
-    #     self.phone_verification_sent_at = datetime.utcnow()
-    #     db.session.commit()
-    #     return self.phone_verification_code
-
-    # def verify_phone(self, code):
-    #     """Verify phone with code"""
-    #     if code == self.phone_verification_code:
-    #         if self.phone_verification_sent_at + timedelta(minutes=10) > datetime.utcnow():
-    #             self.phone_verified = True
-    #             self.phone_verification_code = None
-    #             db.session.commit()
-    #             return True
-    #     return False
+ 
 
     # Account Security Methods
-    def record_failed_login(self):
-        """Record a failed login attempt"""
-        self.failed_login_attempts += 1
-        self.last_failed_login = datetime.now(timezone.utc)
-        
-        # Lock account after 5 failed attempts
-        if self.failed_login_attempts >= 5:
-            self.account_locked_until = datetime.now(timezone.utc) + timedelta(minutes=30)
-        
-        db.session.commit()
-
-    def reset_failed_login_attempts(self):
-        """Reset failed login attempts after successful login"""
-        self.failed_login_attempts = 0
-        self.last_failed_login = None
-        self.account_locked_until = None
-        db.session.commit()
 
     def is_account_locked(self):
         """Check if account is locked"""
@@ -152,14 +104,6 @@ class BaseUser(UserMixin, db.Model):
             self.account_locked_until = None
             db.session.commit()
         return False
-
-    # Password Management
-    def change_password(self, new_password):
-        """Change user password and record the time"""
-        from app import bcrypt_var
-        self.password_hash = bcrypt_var.generate_password_hash(new_password).decode('utf-8')
-        self.password_changed_at = datetime.now(timezone.utc)
-        db.session.commit()
 
 # --- Patient Model ---
 class Patient(BaseUser):
@@ -175,8 +119,8 @@ class Patient(BaseUser):
     medical_docs = db.Column(db.Text)  # URLs to past medical documents (optional)
     
     # Health Metrics
-    weight = db.Column(db.Float)
-    height = db.Column(db.Float)
+    weight = db.Column(db.Text)
+    height = db.Column(db.Text)
     blood_pressure = db.Column(db.String(20))
     blood_glucose = db.Column(db.String(20))
     additional_metrics = db.Column(db.Text)  # JSON object for custom metrics
