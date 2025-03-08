@@ -67,9 +67,75 @@ def fill_data():
         print(f"Dashboard error: {str(e)}")
         return jsonify({"error": "Failed to fetch data"}), 500
 
-@comms_bp.route('/profile_update', methods=['POST'])
+
+@comms_bp.route('/profile_pic_update', methods=['POST'])
+@token_required
+def profile_pic_update():
+
+    try:
+        # Get current user
+        auth_header = request.headers.get('Authorization')
+        token = auth_header.split(" ")[1]
+        data = jwt.decode(token, str(current_app.config['SECRET_KEY']), algorithms=["HS256"])
+        
+        # Get user with the correct model based on role
+        user_role = data.get('role', '')
+        user_id = data.get('user_id')
+        
+        if user_role == 'patient':
+            current_user = Patient.query.get(user_id)
+        elif user_role == 'doctor':
+            current_user = Doctor.query.get(user_id)
+        elif user_role == 'paramedic':
+            current_user = Paramedic.query.get(user_id)
+        else:
+            return jsonify({"message":"invalid User"})
+
+        if not current_user:
+            return jsonify({"error": "User not found"}), 404
+
+        profile_data = request.form.to_dict()
+
+        # Handle profile picture upload
+        if 'profile_pic' in request.files:
+            profile_pic = request.files['profile_pic']
+            if profile_pic:
+                # Remove old profile picture if it exists
+                if current_user.profile_pic:
+                    old_file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'profile_pics', current_user.profile_pic.split('/')[-1])
+                    print(old_file_path)
+                    if os.path.exists(old_file_path):
+                        os.remove(old_file_path)
+
+                filename = secure_filename(f"{user_id}_{datetime.now().timestamp()}_{profile_pic.filename}")
+                upload_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'profile_pics')
+                os.makedirs(upload_folder, exist_ok=True)
+                file_path = os.path.join(upload_folder, filename)
+                profile_pic.save(file_path)
+                current_user.profile_pic = f"/uploads/profile_pics/{filename}"
+                
+
+        try:
+            # Commit changes
+            db.session.commit()
+            return jsonify({
+                "message": "Profile updated successfully"
+            }), 200
+
+        except Exception as db_error:
+            db.session.rollback()
+            print(f"Database error: {str(db_error)}")
+            raise
+
+    except Exception as e:
+        print(f"Profile update error: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+    
+@comms_bp.route('/user_data_update', methods=['POST'])
 @token_required
 def profile_update():
+
     try:
         # Get current user
         auth_header = request.headers.get('Authorization')
@@ -126,17 +192,6 @@ def profile_update():
         current_user.city = profile_data.get('city', current_user.city)
         current_user.pin_code = profile_data.get('pin_code', current_user.pin_code)
         current_user.state = profile_data.get('state', current_user.state)
-
-        # Handle profile picture upload
-        if 'profile_pic' in request.files:
-            profile_pic = request.files['profile_pic']
-            if profile_pic:
-                filename = secure_filename(f"{user_id}_{datetime.now().timestamp()}_{profile_pic.filename}")
-                upload_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'profile_pics')
-                os.makedirs(upload_folder, exist_ok=True)
-                file_path = os.path.join(upload_folder, filename)
-                profile_pic.save(file_path)
-                current_user.profile_pic = f"/uploads/profile_pics/{filename}"
 
         try:
             # Commit changes

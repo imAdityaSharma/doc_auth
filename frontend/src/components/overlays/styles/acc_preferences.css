@@ -96,6 +96,10 @@
   min-height: 100px;
   resize: vertical;
 }
+.setting-item:hover {
+  background: #f0f2f5;
+  transform: scale(1.01);
+}
 
 /* Actions section */
 .settings-actions {

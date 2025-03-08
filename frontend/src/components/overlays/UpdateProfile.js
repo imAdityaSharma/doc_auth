@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import axiosInstance from '../../utils/axios';
 import './styles/acc_preferences.css';
-import SecureImage from '../common/SecureImage';
 import { FaEdit } from 'react-icons/fa';
+import ImageCropper from './ImageCropper';
+import SecureImage from '../common/SecureImage';
 
 const UpdateProfile = ({ onClose }) => {
+  // Basic state management
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [originalEmail, setOriginalEmail] = useState('');
+
+  // Profile data state
   const [profileData, setProfileData] = useState({
     first_name: '',
     last_name: '',
@@ -20,8 +25,14 @@ const UpdateProfile = ({ onClose }) => {
     pin_code: '',
     state: '',
   });
+
+  // Profile picture states
+  const [showCropper, setShowCropper] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState(null);
   const [profilePic, setProfilePic] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('/default-profile.png');
+
+  // Email verification states
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
   const [verificationStatus, setVerificationStatus] = useState({
@@ -30,38 +41,34 @@ const UpdateProfile = ({ onClose }) => {
     verified: false,
     error: null
   });
-  const [originalEmail, setOriginalEmail] = useState('');
 
-  
+  // Fetch user data on component mount
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         setLoading(true);
         const response = await axiosInstance.get('/comms/filldata');
-        console.log('Fetched user data:', response.data);
-        // const profilePicUrl = response.data.profile_pic ? 
-        //   `http://127.0.0.1:5000${response.data.profile_pic}` :
-        //   '/default-profile.png';
+        
         if (response.data) {
-          setProfileData(prevData => ({
-            ...prevData,
-            first_name: response.data.name || '',
-            last_name: response.data.last_name || '',
-            primary_email: response.data.primary_email || '',
-            primary_contact: response.data.primary_contact || '',
-            date_of_birth: response.data.date_of_birth || '',
-            house_no: response.data.house_no || '',
-            apartment: response.data.apartment || '',
-            colony: response.data.colony || '',
-            city: response.data.city || '',
-            pin_code: response.data.pin_code || '',
-            state: response.data.state || '',
+          const userData = response.data;
+          setProfileData({
+            first_name: userData.name || '',
+            last_name: userData.last_name || '',
+            primary_email: userData.primary_email || '',
+            primary_contact: userData.primary_contact || '',
+            date_of_birth: userData.date_of_birth || '',
+            house_no: userData.house_no || '',
+            apartment: userData.apartment || '',
+            colony: userData.colony || '',
+            city: userData.city || '',
+            pin_code: userData.pin_code || '',
+            state: userData.state || '',
             profile_pic: response.data.profile_pic ? `http://127.0.0.1:5000${response.data.profile_pic}` :'/default-profile.png'
-          }));
+          });
 
-          // Store the original email for comparison
-          setOriginalEmail(response.data.primary_email || '');
+          setOriginalEmail(userData.primary_email || '');
 
+          // Handle profile picture URL
           if (response.data.profile_pic) {
             setPreviewUrl(response.data.profile_pic);
           } else {
@@ -76,10 +83,10 @@ const UpdateProfile = ({ onClose }) => {
       }
     };
 
-    fetchUserData(); // This should only run once when the component mounts
-  }, []); // Ensure the dependency array is empty
-  
- 
+    fetchUserData();
+  }, []);
+
+  // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setProfileData(prevData => ({
@@ -87,20 +94,44 @@ const UpdateProfile = ({ onClose }) => {
       [name]: value
     }));
 
-    // Check if the email has changed
-    if (name === 'primary_email' && value !== profileData.primary_email) {
-      setIsEmailVerified(false); // Reset verification status
+    if (name === 'primary_email' && value !== originalEmail) {
+      setIsEmailVerified(false);
     }
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setProfilePic(file);
-      setPreviewUrl(URL.createObjectURL(file));
+  // Handle profile picture selection
+  const handleFileSelect = (event) => {
+    if (event.target.files && event.target.files.length > 0) {
+      const file = event.target.files[0];
+      
+      if (file.size > 5 * 1024 * 1024) {
+        setMessage('File size must be less than 5MB');
+        return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        setMessage('Please select an image file');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImageToCrop(reader.result);
+        setShowCropper(true);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
+  // Handle cropped image
+  const handleCroppedImage = (newImageUrl) => {
+    
+    setShowCropper(false);
+    setImageToCrop(null);
+    setMessage('Profile picture updated successfully!');
+  };
+
+  // Email verification functions
   const sendVerificationCode = async () => {
     try {
       setVerificationStatus({
@@ -121,7 +152,7 @@ const UpdateProfile = ({ onClose }) => {
           verified: false,
           error: null
         });
-        alert('Verification code sent! Please check your email.');
+        setMessage('Verification code sent! Please check your email.');
       }
     } catch (error) {
       setVerificationStatus({
@@ -130,7 +161,7 @@ const UpdateProfile = ({ onClose }) => {
         verified: false,
         error: error.response?.data?.error || 'Failed to send verification code'
       });
-      alert(error.response?.data?.error || 'Failed to send verification code');
+      setMessage(error.response?.data?.error || 'Failed to send verification code');
     }
   };
 
@@ -145,108 +176,98 @@ const UpdateProfile = ({ onClose }) => {
       if (response.data.success) {
         setVerificationStatus({
           isVerifying: false,
+          verificationSent: true,
           verified: true,
           error: null
         });
-        setIsEmailVerified(true); // Set email as verified
-        alert('Email verified successfully!');
+        setIsEmailVerified(true);
+        setMessage('Email verified successfully!');
       }
     } catch (error) {
       setVerificationStatus({
         isVerifying: false,
+        verificationSent: true,
         verified: false,
         error: error.response?.data?.error || 'Failed to verify code'
       });
-      alert(error.response?.data?.error || 'Failed to verify code');
+      setMessage(error.response?.data?.error || 'Failed to verify code');
     }
   };
 
   const handleOTPChange = (index, value) => {
     if (value.length > 1) return;
-    if (!/^[0-9a-fA-F]$/.test(value) && value !== '') return;
+    if (!/^[0-9]$/.test(value) && value !== '') return;
 
     const newVerificationCode = [...verificationCode];
     newVerificationCode[index] = value;
     setVerificationCode(newVerificationCode);
 
+    // Auto-focus next input
     if (value !== '' && index < 5) {
       const nextInput = document.getElementById(`otp-${index + 1}`);
       if (nextInput) nextInput.focus();
     }
   };
-
-  // const handleKeyDown = (index, e) => {
-  //   if (e.key === 'Backspace' && !verificationCode[index] && index > 0) {
-  //     const prevInput = document.getElementById(`otp-${index - 1}`);
-  //     if (prevInput) prevInput.focus();
-  //   }
-  // };
-
+  const handleCropperClose = () => {
+    setShowCropper(false);
+    setImageToCrop(null);
+  };
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setMessage('');
-
-    // Check if email verification is needed
+    
     if (profileData.primary_email !== originalEmail && !isEmailVerified) {
         setMessage('Please verify your new email address before saving changes.');
-        setLoading(false);
         return;
     }
 
     try {
+        setLoading(true);
+        
+        // Create FormData object
         const formData = new FormData();
         
-        // Add all profile data fields
+        // Append all profile data fields to FormData
         Object.keys(profileData).forEach(key => {
-            if (profileData[key] !== null && profileData[key] !== undefined) {
+            if (profileData[key]) { // Only append if value exists
                 formData.append(key, profileData[key]);
             }
         });
 
-        // Add profile pic if it exists
-        if (profilePic) {
-            formData.append('profile_pic', profilePic);
-        }
-
-        console.log('Sending profile data:', Object.fromEntries(formData));  // Debug log
-
-        const response = await axiosInstance.post('/comms/profile_update', formData, {
+        const response = await axiosInstance.post('/comms/user_data_update', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
-            },
+            }
         });
+        
+        console.log('API Response:', response.data);
 
-        console.log('Profile update response:', response.data);  // Debug log
-
-        if (response.data.user) {
-            // Update local state with new data
-            setProfileData(prevData => ({
-                ...prevData,
-                ...response.data.user
-            }));
+        if (response.data.message === "Profile updated successfully") {
+            setMessage('Profile updated successfully!');
+            setTimeout(() => {
+                onClose();
+            }, 2000);
+        } else {
+            setMessage('Failed to update profile');
         }
-
-        setMessage('Profile updated successfully!');
-        setTimeout(() => {
-            if (onClose) onClose();
-        }, 2000);
     } catch (error) {
         console.error('Error updating profile:', error);
-        setMessage(error.response?.data?.error || 'Failed to update profile. Please try again.');
+        setMessage(error.response?.data?.message || 'Failed to update profile');
     } finally {
         setLoading(false);
     }
 };
 
   if (loading) {
-    return <div className="settings-overlay">
-      <div className="settings-modal">
-        <div className="settings-header">
-          <h2>Loading...</h2>
+    return (
+      <div className="settings-overlay">
+        <div className="settings-modal">
+          <div className="settings-header">
+            <h2>Loading...</h2>
+          </div>
         </div>
       </div>
-    </div>;
+    );
   }
 
   return (
@@ -258,17 +279,25 @@ const UpdateProfile = ({ onClose }) => {
         </div>
 
         {message && (
-          <div className={`setting-item ${message.includes('Failed') ? 'error' : 'success'}`}>
+          <div className={`message ${message.includes('success') ? 'success' : 'error'}`}>
             {message}
           </div>
         )}
 
+          {showCropper && imageToCrop && (
+            <ImageCropper
+              imageToCrop={imageToCrop}
+              onImageCropped={handleCroppedImage}
+              onCancel={handleCropperClose}
+            />
+          )}
         <form onSubmit={handleSubmit} className="settings-content">
-          {/* Profile Picture */}
+          {/* Profile Picture Section */}
           <div className="settings-section">
-            <h3 className="settings-section-title">Profile Picture</h3>
+            <h3>Profile Picture</h3>
+            <div className="profile-picture-container">
             <div className="setting-item" style={{ position: 'relative', width: '120px', height: '120px', margin: '0 auto', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              <SecureImage 
+            <SecureImage 
                 src={previewUrl}
                 alt="Profile Preview" 
                 style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
@@ -276,30 +305,25 @@ const UpdateProfile = ({ onClose }) => {
               <input
                 type="file"
                 accept="image/*"
-                onChange={handleFileChange}
+                onChange={handleFileSelect}
                 style={{ display: 'none' }}
-                id="file-input"
+                id="profile-pic-input"
               />
-              <label 
-                htmlFor="file-input"
-                style={{
-                  position: 'absolute',
-                  bottom: '0',
-                  right: '0',
-                  cursor: 'pointer',
-                  backgroundColor: 'white',
-                  borderRadius: '50%',
-                  padding: '5px',
-                  boxShadow: '0 0 5px rgba(0,0,0,0.3)',
-                }}
-              >
-                <FaEdit style={{ color: '#007bff' }} />
+              
+                <label 
+                  htmlFor="profile-pic-input" 
+                  className="edit-profile-pic-button"
+                  style={{position:'absolute', bottom:'0', right:'0'}} 
+                >
+                <FaEdit />
               </label>
             </div>
           </div>
-          {/* Basic Information */}
+          </div>
+
+          {/* Basic Information Section */}
           <div className="settings-section">
-            <h3 className="settings-section-title">Basic Information</h3>
+            <h3>Basic Information</h3>
             <div className="setting-item">
               <input
                 type="text"
@@ -329,38 +353,32 @@ const UpdateProfile = ({ onClose }) => {
                 onChange={handleInputChange}
                 required
               />
-              {/* Show the verification button only if the email has changed */}
               {profileData.primary_email !== originalEmail && !isEmailVerified && (
                 <button 
                   type="button"
                   onClick={sendVerificationCode}
                   disabled={verificationStatus.isVerifying}
-                  style={{ marginTop: '5px' }}
+                  className="verification-button"
                 >
-                  {verificationStatus.isVerifying ? 'Sending...' : 'Get Verification Code'}
+                  {verificationStatus.isVerifying ? 'Sending...' : 'Verify Email'}
                 </button>
               )}
             </div>
-            {verificationStatus.verificationSent && (
-              <div className="setting-item">
-                <label>Verification Code *</label>
-                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                  {[0, 1, 2, 3, 4, 5].map((index) => (
+
+            {/* Verification Code Input */}
+            {verificationStatus.verificationSent && !verificationStatus.verified && (
+              <div className="setting-item verification-code-container">
+                <label>Enter Verification Code</label>
+                <div className="otp-inputs">
+                  {verificationCode.map((digit, index) => (
                     <input
                       key={index}
+                      id={`otp-${index}`}
                       type="text"
-                      value={verificationCode[index]}
+                      value={digit}
                       onChange={(e) => handleOTPChange(index, e.target.value)}
                       maxLength={1}
-                      style={{
-                        width: '40px',
-                        height: '40px',
-                        textAlign: 'center',
-                        fontSize: '1.2em',
-                        border: '1px solid #ccc',
-                        borderRadius: '4px',
-                        margin: '0 4px'
-                      }}
+                      className="otp-input"
                     />
                   ))}
                 </div>
@@ -368,28 +386,19 @@ const UpdateProfile = ({ onClose }) => {
                   type="button"
                   onClick={verifyCode}
                   disabled={verificationCode.some(digit => digit === '') || 
-                           verificationStatus.isVerifying || 
-                           verificationStatus.verified}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: verificationStatus.verified ? '#4CAF50' : '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    marginTop: '10px'
-                  }}
+                           verificationStatus.isVerifying}
+                  className="verify-code-button"
                 >
-                  {verificationStatus.isVerifying ? 'Verifying...' : 
-                   verificationStatus.verified ? 'Verified ✓' : 'Verify Code'}
+                  {verificationStatus.isVerifying ? 'Verifying...' : 'Verify Code'}
                 </button>
               </div>
             )}
+
             <div className="setting-item">
               <input
                 type="tel"
                 name="primary_contact"
-                placeholder="Phone"
+                placeholder="Phone Number"
                 value={profileData.primary_contact}
                 onChange={handleInputChange}
                 required
@@ -405,9 +414,9 @@ const UpdateProfile = ({ onClose }) => {
             </div>
           </div>
 
-          {/* Address Information */}
+          {/* Address Section */}
           <div className="settings-section">
-            <h3 className="settings-section-title">Address</h3>
+            <h3>Address</h3>
             <div className="setting-item">
               <input
                 type="text"
