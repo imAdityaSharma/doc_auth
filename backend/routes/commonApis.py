@@ -42,7 +42,7 @@ def fill_data():
         except jwt.InvalidTokenError:
             return jsonify({"error": "Invalid token"}), 401
 
-        patient_data = {
+        User_data = {
             "name": current_user.first_name,
             "email": current_user.primary_email,
             "primary_contact": current_user.primary_contact,
@@ -59,7 +59,7 @@ def fill_data():
             "profile_pic": current_user.profile_pic,
         }
         
-        response = jsonify(patient_data)
+        response = jsonify(User_data)
         response.headers.add('Access-Control-Allow-Origin', 'http://127.0.0.1:3000')
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response, 200

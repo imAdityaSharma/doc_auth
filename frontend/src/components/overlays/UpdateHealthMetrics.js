@@ -22,6 +22,7 @@ const UpdateHealthMetrics = ({ onClose }) => {
   const [pastSurgeries, setPastSurgeries] = useState([]);
   const [allergies, setAllergies] = useState([]);
   const [additionalMetrics, setAdditionalMetrics] = useState([]);
+  const [currentMedicalDoc, setCurrentMedicalDoc] = useState('');
 
   // New item inputs
   const [newCondition, setNewCondition] = useState('');
@@ -30,11 +31,26 @@ const UpdateHealthMetrics = ({ onClose }) => {
   const [newAllergy, setNewAllergy] = useState('');
   const [newMetric, setNewMetric] = useState({ name: '', value: '' });
 
+  // Helper function to parse data safely
+  const safelyParseData = (data) => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    
+    try {
+      // Try to parse as JSON
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : [data];
+    } catch (e) {
+      // If it's not valid JSON, treat it as a single item
+      return data.trim() ? [data] : [];
+    }
+  };
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        const response = await axiosInstance.get('/puser/dashboard');
+        const response = await axiosInstance.get('/puser/update-healthmetrics');
         console.log('Fetched user data:', response.data);
         
         if (response.data) {
@@ -45,19 +61,16 @@ const UpdateHealthMetrics = ({ onClose }) => {
             bloodPressure: response.data.bloodPressure || '',
             bloodGlucose: response.data.bloodGlucose || '',
           });
+          
+          // Store current medical doc path
+          setCurrentMedicalDoc(response.data.medical_docs || '');
 
-          // Set multi-entry data
-          // Parse JSON data if it exists, otherwise use empty arrays
-          setChronicConditions(response.data.chronic_conditions ? 
-            JSON.parse(response.data.chronic_conditions) : []);
-          setMedications(response.data.medications ? 
-            JSON.parse(response.data.medications) : []);
-          setPastSurgeries(response.data.past_surgeries ? 
-            JSON.parse(response.data.past_surgeries) : []);
-          setAllergies(response.data.allergies ? 
-            JSON.parse(response.data.allergies) : []);
-          setAdditionalMetrics(response.data.additional_metrics ? 
-            JSON.parse(response.data.additional_metrics) : []);
+          // Set multi-entry data handling both JSON strings and raw values
+          setChronicConditions(safelyParseData(response.data.chronic_conditions));
+          setMedications(safelyParseData(response.data.medications));
+          setPastSurgeries(safelyParseData(response.data.past_surgeries));
+          setAllergies(safelyParseData(response.data.allergies));
+          setAdditionalMetrics(safelyParseData(response.data.additional_metrics));
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -459,7 +472,10 @@ const UpdateHealthMetrics = ({ onClose }) => {
               <div className="multi-entry-list">
                 {additionalMetrics.map((metric, index) => (
                   <div key={index} className="multi-entry-item">
-                    <span><strong>{metric.name}:</strong> {metric.value}</span>
+                    <span>
+                      <strong>{typeof metric === 'object' ? metric.name : 'Custom Metric'}:</strong> 
+                      {typeof metric === 'object' ? metric.value : metric}
+                    </span>
                     <button 
                       type="button" 
                       className="remove-button"
@@ -489,6 +505,11 @@ const UpdateHealthMetrics = ({ onClose }) => {
               {medicalDoc && (
                 <div className="file-selected">
                   Selected file: {medicalDoc.name}
+                </div>
+              )}
+              {!medicalDoc && currentMedicalDoc && (
+                <div className="file-selected">
+                  Current document: {currentMedicalDoc.split('/').pop()}
                 </div>
               )}
             </div>
