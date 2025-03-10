@@ -76,70 +76,6 @@ email_server = EmailServer()
 def load_user(user_id):
     return BaseUser.query.get(int(user_id))
 
-# @app.route("/send-verification", methods=["GET","POST", "OPTIONS"])
-# def send_verification():
-#     # Handle preflight request
-#     if request.method == "OPTIONS":
-#         return pre_flight_cors()
-        
-#     try:
-#         data = request.get_json()
-#         email = data.get('email')
-#         is_password_change = data.get('isPasswordChange', False)  # New parameter
-#         is_forgot_password = data.get('isForgotPassword',False)
-#         if not email:
-#             return jsonify({"error": "Email is required"}), 400
-            
-#         # Check if email exists
-#         existing_user = BaseUser.query.filter_by(primary_email=email).first()
-        
-#         # For registration, we want to prevent existing emails
-#         # For password change, we want to ensure the email exists
-
-#         """ SECURITY VULNERABILITY NEEDS TO BE FIXED"""
-#         if not is_password_change and existing_user:
-#             return jsonify({"error": "Email already registered"}), 409
-#         elif is_password_change and not existing_user:
-#             return jsonify({"error": "Email not found"}), 404
-#         elif is_forgot_password and existing_user:
-            
-#         """----------------------------------------"""
-#         """FIX, BUT SESSION NOT WORKING
-#         '''
-#         if 'is_password_change' in data:
-#             # Check if user is authenticated through session
-#             if 'user_id' not in session or session['email'] != email:
-#                 return jsonify({"error": "Unauthorized password change request"}), 401
-#         elif existing_user:
-#             return jsonify({"error": "Email already registered"}), 409
-#         '''
-#         ---------------------------------------------"""    
-#         # Generate verification token
-#         verification_token = secrets.token_hex(3)  # 6-digit hex code
-        
-#         # Store verification data in Redis with expiration
-#         verification_data = {
-#             'email': email,
-#             'token': verification_token,
-#             'is_password_change': is_password_change,  # Store the purpose
-#             'expires': (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat()
-#         }
-#         # Use email as key in Redis
-#         redis_key = f"verification:{email}"
-#         redis_client.setex(redis_key, timedelta(minutes=30), json.dumps(verification_data))
-
-#         # Send verification email
-#         if email_server.send_verification_email(email, verification_token):
-#             return jsonify({
-#                 "success": True,
-#                 "message": "Verification code sent successfully",
-#                 "email": email
-#             }), 200
-#         else:
-#             return jsonify({"error": "Failed to send verification email"}), 500
-            
-#     except Exception as e:
-#         return jsonify({"error": str(e)}), 500
 @app.route("/send-verification", methods=["GET", "POST", "OPTIONS"])
 def send_verification():
     # Handle preflight request
@@ -776,45 +712,7 @@ def password_change():
 
 
 
-# healper Functions
-def is_valid_email(email):
-    """Validate email format"""
-    # Basic email validation with regex
-    import re
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    return re.match(pattern, email) is not None
 
-def verify_authenticated_user(email):
-    """Verify if the current user is authorized to change password for this email"""
-    if 'user_id' not in session:
-        return False
-    
-    # Get user from session and compare emails
-    user_id = session.get('user_id')
-    user = BaseUser.query.get(user_id)
-    return user and user.primary_email == email
-
-def generate_numeric_otp(length=6):
-    """Generate a numeric OTP of specified length"""
-    return ''.join(secrets.choice("0123456789") for _ in range(length))
-
-def get_verification_purpose(is_password_change, is_forgot_password):
-    """Get the purpose of verification for better tracking"""
-    if is_forgot_password:
-        return "forgot_password"
-    elif is_password_change:
-        return "password_change"
-    else:
-        return "registration"
-
-def get_email_template_type(is_password_change, is_forgot_password):
-    """Get the appropriate email template based on verification purpose"""
-    if is_forgot_password:
-        return "forgot_password_template"
-    elif is_password_change:
-        return "password_change_template"
-    else:
-        return "registration_template"
 
 def is_rate_limited(email):
     """Check if the email is being rate limited for verification requests"""
@@ -833,22 +731,6 @@ def is_rate_limited(email):
     # Increment the counter
     redis_client.incr(rate_limit_key)
     return False
-
-def log_verification_attempt(email, template_type):
-    """Log verification attempt for auditing"""
-    # Implementation depends on your logging system
-    pass
-
-def log_error(message):
-    """Log error messages"""
-    # Implementation depends on your logging system
-    pass
-
-def log_exception(function_name, exception):
-    """Log exceptions with context"""
-    # Implementation depends on your logging system
-    pass
-
 
 
 
