@@ -5,7 +5,7 @@ import {BrowserRouter, Routes, Route, Link} from 'react-router-dom';
   
 import Home from "./components/Home";
 import LoginForm from './components/LoginForm'
-import RegistrationForm from './components/Registration/RegistrationForm'
+import RegistrationForm from './components/RegistrationForm'
 import PatientDashboard from './components/patientfrontend/patientDashboard'
 import DocDashboard from './components/docFrontend/docdashboard'
 import ParaDashboard from './components/paraFrontend/paraDashboard'

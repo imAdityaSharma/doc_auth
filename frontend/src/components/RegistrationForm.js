@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
-import "./register.css";
+import "./../styles/register.css"
 
 // Add axios default configuration
 axios.defaults.withCredentials = true;
