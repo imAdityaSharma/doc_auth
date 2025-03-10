@@ -15,3 +15,4 @@ Flask-Migrate
 pyjwt
 pyotp
 redis
+python-dotenv

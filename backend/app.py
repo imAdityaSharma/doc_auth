@@ -18,29 +18,33 @@ from flask_cors import cross_origin
 from decorators import pre_flight_cors
 from decorators import token_required
 import random
+from dotenv import load_dotenv
+
 from routes.doctorapis import doctor_bp
 from routes.patientapis import patient_bp
 from routes.paraApis import para_bp
 from routes.commonApis import comms_bp  
+
 app = create_app()
 bcrypt_var = Bcrypt(app) 
-
-# Configure Redis
+load_dotenv()
+# Get Redis configuration from environment variables
 redis_url = os.getenv('REDIS_URL', 'redis://redis:6379')
 redis_client = redis.from_url(redis_url)
 
+# Configure application session and security settings
 app.config.update(
     SESSION_TYPE='redis',
-    SESSION_REDIS=redis.from_url(redis_url),
+    SESSION_REDIS=redis_client,  # Use the already created client
     SESSION_KEY_PREFIX='session:',
-    PERMANENT_SESSION_LIFETIME=timedelta(hours=1),
-    SECRET_KEY='987qwert65fyhh',
-    SESSION_COOKIE_NAME='session_id',
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=int(os.getenv('SESSION_LIFETIME_HOURS', '1'))),
+    SECRET_KEY=os.getenv('SECRET_KEY', 'default_secret_key'),
+    SESSION_COOKIE_NAME=os.getenv('SESSION_COOKIE_NAME', 'session_id'),
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SECURE=False,  # Set to True in production with HTTPS
-    SESSION_COOKIE_SAMESITE='None',  # Changed from 'Lax' to 'None'
+    SESSION_COOKIE_SECURE=os.getenv('FLASK_ENV', 'development') == 'production',  # Auto-enable in production
+    SESSION_COOKIE_SAMESITE=os.getenv('SESSION_COOKIE_SAMESITE', 'Lax'),  # Configurable, default to safer option
     SESSION_COOKIE_PATH='/',
-    SESSION_COOKIE_DOMAIN=None,
+    SESSION_COOKIE_DOMAIN=os.getenv('SESSION_COOKIE_DOMAIN', None),
 )
 
 # Initialize Flask-Session
