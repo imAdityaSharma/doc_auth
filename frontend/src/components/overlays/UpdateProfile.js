@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axiosInstance from '../../utils/axios';
-import './styles/acc_preferences.css';
+import './styles/updateProfile.css';
 import { FaEdit } from 'react-icons/fa';
 import ImageCropper from './ImageCropper';
 import SecureImage from '../common/SecureImage';
@@ -260,9 +260,9 @@ const UpdateProfile = ({ onClose }) => {
 
   if (loading) {
     return (
-      <div className="settings-overlay">
-        <div className="settings-modal">
-          <div className="settings-header">
+      <div className="Update_profile-overlay">
+        <div className="Update_profile-modal">
+          <div className="Update_profile-header">
             <h2>Loading...</h2>
           </div>
         </div>
@@ -271,9 +271,9 @@ const UpdateProfile = ({ onClose }) => {
   }
 
   return (
-    <div className="settings-overlay">
-      <div className="settings-modal">
-        <div className="settings-header">
+    <div className="Update_profile-overlay">
+      <div className="Update_profile-modal">
+        <div className="Update_profile-header">
           <h2>Update Profile</h2>
           <button className="close-button" onClick={onClose}>&times;</button>
         </div>
@@ -291,12 +291,12 @@ const UpdateProfile = ({ onClose }) => {
               onCancel={handleCropperClose}
             />
           )}
-        <form onSubmit={handleSubmit} className="settings-content">
+        <form onSubmit={handleSubmit} className="Update_profile-content">
           {/* Profile Picture Section */}
-          <div className="settings-section">
+          <div className="Update_profile-section">
             <h3>Profile Picture</h3>
             <div className="profile-picture-container">
-            <div className="setting-item" style={{ position: 'relative', width: '120px', height: '120px', margin: '0 auto', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <div className="Update_profile-item" style={{ position: 'relative', width: '120px', height: '120px', margin: '0 auto', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
             <SecureImage 
                 src={previewUrl}
                 alt="Profile Preview" 
@@ -322,9 +322,9 @@ const UpdateProfile = ({ onClose }) => {
           </div>
 
           {/* Basic Information Section */}
-          <div className="settings-section">
+          <div className="Update_profile-section">
             <h3>Basic Information</h3>
-            <div className="setting-item">
+            <div className="Update_profile-item">
               <input
                 type="text"
                 name="first_name"
@@ -334,7 +334,7 @@ const UpdateProfile = ({ onClose }) => {
                 required
               />
             </div>
-            <div className="setting-item">
+            <div className="Update_profile-item">
               <input
                 type="text"
                 name="last_name"
@@ -344,7 +344,7 @@ const UpdateProfile = ({ onClose }) => {
                 required
               />
             </div>
-            <div className="setting-item">
+            <div className="Update_profile-item">
               <input
                 type="email"
                 name="primary_email"
@@ -367,7 +367,7 @@ const UpdateProfile = ({ onClose }) => {
 
             {/* Verification Code Input */}
             {verificationStatus.verificationSent && !verificationStatus.verified && (
-              <div className="setting-item verification-code-container">
+              <div className="Update_profile-item verification-code-container">
                 <label>Enter Verification Code</label>
                 <div className="otp-inputs">
                   {verificationCode.map((digit, index) => (
@@ -394,7 +394,7 @@ const UpdateProfile = ({ onClose }) => {
               </div>
             )}
 
-            <div className="setting-item">
+            <div className="Update_profile-item">
               <input
                 type="tel"
                 name="primary_contact"
@@ -404,7 +404,7 @@ const UpdateProfile = ({ onClose }) => {
                 required
               />
             </div>
-            <div className="setting-item">
+            <div className="Update_profile-item">
               <input
                 type="date"
                 name="date_of_birth"
@@ -415,9 +415,9 @@ const UpdateProfile = ({ onClose }) => {
           </div>
 
           {/* Address Section */}
-          <div className="settings-section">
+          <div className="Update_profile-section">
             <h3>Address</h3>
-            <div className="setting-item">
+            <div className="Update_profile-item">
               <input
                 type="text"
                 name="house_no"
@@ -426,7 +426,7 @@ const UpdateProfile = ({ onClose }) => {
                 onChange={handleInputChange}
               />
             </div>
-            <div className="setting-item">
+            <div className="Update_profile-item">
               <input
                 type="text"
                 name="apartment"
@@ -435,7 +435,7 @@ const UpdateProfile = ({ onClose }) => {
                 onChange={handleInputChange}
               />
             </div>
-            <div className="setting-item">
+            <div className="Update_profile-item">
               <input
                 type="text"
                 name="colony"
@@ -444,7 +444,7 @@ const UpdateProfile = ({ onClose }) => {
                 onChange={handleInputChange}
               />
             </div>
-            <div className="setting-item">
+            <div className="Update_profile-item">
               <input
                 type="text"
                 name="city"
@@ -453,7 +453,7 @@ const UpdateProfile = ({ onClose }) => {
                 onChange={handleInputChange}
               />
             </div>
-            <div className="setting-item">
+            <div className="Update_profile-item">
               <input
                 type="text"
                 name="pin_code"
@@ -462,7 +462,7 @@ const UpdateProfile = ({ onClose }) => {
                 onChange={handleInputChange}
               />
             </div>
-            <div className="setting-item">
+            <div className="Update_profile-item">
               <input
                 type="text"
                 name="state"
@@ -473,7 +473,7 @@ const UpdateProfile = ({ onClose }) => {
             </div>
           </div>
 
-          <div className="settings-actions">
+          <div className="Update_profile-actions">
             <button type="button" className="cancel-button" onClick={onClose}>
               Cancel
             </button>

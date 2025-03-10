@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import Cropper from 'react-easy-crop';
 import axiosInstance from '../../utils/axios';
-import "./ImageCropper.css";
+import "./styles/ImageCropper.css";
 
 function ImageCropper({ imageToCrop, onImageCropped, onCancel }) {
     const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -53,26 +53,34 @@ function ImageCropper({ imageToCrop, onImageCropped, onCancel }) {
 
     const handleSave = async () => {
         if (!croppedAreaPixels) return;
-
+    
         try {
             setLoading(true);
             setError(null);
-
+    
             // Get the cropped image as blob
             const croppedImage = await getCroppedImg(imageToCrop, croppedAreaPixels);
-
+    
             // Create FormData and append the cropped image
             const formData = new FormData();
             formData.append('profile_pic', croppedImage, 'profile.jpg');
-
+    
             // Send to server
             const response = await axiosInstance.post('/comms/profile_pic_update', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
             });
-
-            if (response.data.success) {
+    
+            // Check for the specific success message
+            if (response.data.message === "Profile updated successfully") {
+                onImageCropped(URL.createObjectURL(croppedImage));
+                // This will close the overlay
+                onCancel();
+                // Reload the page
+                window.location.reload();
+            } else if (response.data.success) {
+                // For backward compatibility with your current implementation
                 onImageCropped(URL.createObjectURL(croppedImage));
                 setLoading(false);
             }

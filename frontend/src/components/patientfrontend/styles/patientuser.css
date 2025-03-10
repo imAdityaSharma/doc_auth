@@ -3,12 +3,15 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
     }
 
     .dashboard-header {
-      background: #fff;
+      background: var(--bg-secondary);
+      box-shadow: var(--header-shadow);
       padding: 1rem 2rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -26,8 +29,8 @@
       width: 80px;
       height: 80px;
       border-radius: 50%;
-      border-color: #e0e0e0;
-      background-color: #e0e0e0;
+      background-color: var(--profile-bg);
+      border-color: var(--profile-bg);
       border: none;
       padding: 0;
       cursor: pointer;
@@ -51,9 +54,9 @@
       position: absolute;
       right: 0;
       top: 100%;
-      background: white;
+      background: var(--bg-secondary);
+      box-shadow: var(--modal-shadow);
       border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       padding: 8px 0;
       margin-top: 8px;
       min-width: 150px;
@@ -69,18 +72,18 @@
       border: none;
       cursor: pointer;
       font-size: 14px;
-      color: #333;
+      color: var(--text-primary);
       transition: background-color 0.2s;
     }
     
     .profile-menu button:hover {
-      background-color: #f5f5f5;
+      background-color: var(--menu-hover);
     }
 
     .dashboard-content {
       flex: 1;
       padding: 2rem;
-      background: #f5f7fa;
+      background: var(--bg-primary);
     }
 
     .welcome-section {
@@ -94,10 +97,10 @@
     }
 
     .dashboard-card {
-      background: white;
+      background: var(--bg-secondary);
+      box-shadow: var(--card-shadow);
       border-radius: 8px;
       padding: 1.5rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
     .appointment-item, .prescription-item {
@@ -114,20 +117,20 @@
     .metric-item {
       text-align: center;
       padding: 1rem;
-      background: #f8f9fa;
+      background: var(--metric-bg);
       border-radius: 4px;
     }
 
     .metric-label {
       display: block;
-      color: #666;
+      color: var(--text-secondary);
       margin-bottom: 0.5rem;
     }
 
     .metric-value {
       font-size: 1.25rem;
       font-weight: bold;
-      color: #333;
+      color: var(--text-primary);
     }
 
     .dashboard-footer {

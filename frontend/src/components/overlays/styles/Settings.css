@@ -1,5 +1,5 @@
 /* Overlay container */
-.settings-overlay {
+.app-settings-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -12,39 +12,40 @@
   z-index: 9999;
 }
 
-.settings-modal {
-  background: white;
+.app-settings-modal {
+  background: var(--bg-secondary);
   padding: 32px;
   border-radius: 16px;
   width: 90%;
   max-width: 500px;
   position: relative;
   z-index: 10000;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--modal-shadow);
+  animation: app-slideIn 0.3s ease-out;
 }
 
-.settings-header {
+.app-settings-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
   padding-bottom: 15px;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid var(--border-color);
 }
 
-.settings-header h2 {
+.app-settings-header h2 {
   margin: 0;
   font-size: 24px;
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
-.close-button {
-  background: #f5f6fa;
+.app-close-button {
+  background: var(--button-secondary);
   border: none;
   font-size: 20px;
   cursor: pointer;
-  color: #666;
+  color: var(--text-secondary);
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -54,95 +55,100 @@
   transition: all 0.2s ease;
 }
 
-.close-button:hover {
-  background: #e8eaf0;
-  color: #333;
+.app-close-button:hover {
+  background: var(--menu-hover);
+  color: var(--text-primary);
   transform: scale(1.05);
 }
 
-.settings-content {
+.app-settings-content {
   padding: 10px 0;
 }
 
-.settings-section {
+.app-settings-section {
   margin-bottom: 25px;
 }
 
-.settings-section-title {
+.app-settings-section-title {
   font-size: 16px;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 15px;
   font-weight: 500;
 }
 
-.setting-item {
+.app-setting-item {
   margin-bottom: 20px;
   padding: 12px 16px;
-  background: #f8f9fa;
+  background: var(--bg-tertiary);
   border-radius: 12px;
   transition: all 0.2s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
-.setting-item:hover {
-  background: #f0f2f5;
+.app-setting-item:hover {
   transform: translateX(5px);
 }
 
-.setting-item label {
+.app-setting-item label {
   display: flex;
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
+  width: 100%;
 }
 
-.setting-item span {
-  color: #2c3e50;
+.app-setting-item span {
+  color: var(--text-primary);
   font-size: 15px;
   font-weight: 500;
 }
 
 /* Custom checkbox styling */
-.setting-item input[type="checkbox"] {
+.app-setting-item input[type="checkbox"] {
   position: relative;
   width: 44px;
   height: 24px;
   appearance: none;
-  background: #e0e0e0;
+  background: var(--save-button);
+  border-color: #0c0f18;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.setting-item input[type="checkbox"]:checked {
-  background: #4CAF50;
+.app-setting-item input[type="checkbox"]:checked {
+  background: var(--save-button);
 }
 
-.setting-item input[type="checkbox"]::before {
+.app-setting-item input[type="checkbox"]::before {
   content: '';
   position: absolute;
   width: 20px;
   height: 20px;
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 50%;
   top: 2px;
   left: 2px;
   transition: all 0.3s ease;
 }
 
-.setting-item input[type="checkbox"]:checked::before {
+.app-setting-item input[type="checkbox"]:checked::before {
   left: 22px;
 }
 
-.settings-actions {
+.app-settings-actions {
   margin-top: 30px;
   padding-top: 20px;
-  border-top: 2px solid #f0f0f0;
+  border-top: 2px solid var(--border-color);
   display: flex;
   justify-content: flex-end;
   gap: 12px;
 }
 
-.save-button {
+.app-save-button {
   background: #4CAF50;
   color: white;
   border: none;
@@ -154,12 +160,12 @@
   transition: all 0.2s ease;
 }
 
-.save-button:hover {
+.app-save-button:hover {
   background: #43A047;
   transform: translateY(-2px);
 }
 
-.cancel-button {
+.app-cancel-button {
   background: #f5f6fa;
   color: #666;
   border: none;
@@ -171,13 +177,13 @@
   transition: all 0.2s ease;
 }
 
-.cancel-button:hover {
+.app-cancel-button:hover {
   background: #e8eaf0;
   color: #333;
 }
 
 /* Animation */
-@keyframes slideIn {
+@keyframes app-slideIn {
   from {
     opacity: 0;
     transform: translateY(-20px);
@@ -188,61 +194,57 @@
   }
 }
 
-.settings-modal {
-  animation: slideIn 0.3s ease-out;
-}
-
 /* Responsive design */
 @media (max-width: 768px) {
-  .settings-modal {
+  .app-settings-modal {
     width: 95%;
     padding: 24px;
   }
 
-  .setting-item {
+  .app-setting-item {
     padding: 10px 12px;
   }
 
-  .settings-actions {
+  .app-settings-actions {
     flex-direction: column-reverse;
   }
 
-  .save-button, .cancel-button {
+  .app-save-button, .app-cancel-button {
     width: 100%;
   }
 }
 
 /* Scrollbar styling */
-.settings-container::-webkit-scrollbar {
+.app-settings-container::-webkit-scrollbar {
   width: 8px;
 }
 
-.settings-container::-webkit-scrollbar-track {
+.app-settings-container::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 4px;
 }
 
-.settings-container::-webkit-scrollbar-thumb {
+.app-settings-container::-webkit-scrollbar-thumb {
   background: #888;
   border-radius: 4px;
 }
 
-.settings-container::-webkit-scrollbar-thumb:hover {
+.app-settings-container::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
-  .settings-container {
+  .app-settings-container {
     width: 95%;
     padding: 1rem;
   }
 
-  .settings-header h1 {
+  .app-settings-header h1 {
     font-size: 1.5rem;
   }
 
-  .setting-item {
+  .app-setting-item {
     padding: 0.75rem;
   }
-} 
+}

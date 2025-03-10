@@ -1,0 +1,367 @@
+/* Overlay container */
+.Update_profile-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    padding: 20px;
+    box-sizing: border-box; /* Ensure padding doesn't affect width calculation */
+    overflow-y: auto; /* Allow scrolling on small screens */
+  }
+  
+  .Update_profile-modal {
+    background: var(--bg-secondary);
+    padding: 32px;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    position: relative;
+    z-index: 10000;
+    box-shadow: var(--modal-shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Hide overflow content */
+  }
+  
+  .Update_profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--border-color);
+    flex-shrink: 0;
+  }
+  
+  .Update_profile-header h2 {
+    font-size: 24px;
+    color: var(--text-primary);
+    margin: 0;
+  }
+  
+  .close-button {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: color 0.3s;
+    padding: 0;
+    margin-left: 10px;
+  }
+  
+  .close-button:hover {
+    color: var(--error-text);
+  }
+  
+  /* Make content scrollable */
+  .Update_profile-content {
+    flex: 1;
+    overflow-y: auto; /* Enable vertical scrolling */
+    padding-right: 8px; /* Space for scrollbar */
+    margin-right: -8px; /* Offset padding to maintain layout */
+    max-height: calc(90vh - 100px); /* Account for header and padding */
+  }
+  
+  /* Scrollbar styling */
+  .Update_profile-content::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .Update_profile-content::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+  }
+  
+  .Update_profile-content::-webkit-scrollbar-thumb {
+    background: var(--text-secondary);
+    border-radius: 4px;
+  }
+  
+  .Update_profile-content::-webkit-scrollbar-thumb:hover {
+    background: var(--text-primary);
+  }
+  
+  /* Form sections styling */
+  .Update_profile-section {
+    margin-bottom: 25px;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: var(--card-shadow);
+  }
+  
+  .Update_profile-section-title {
+    font-size: 18px;
+    color: var(--text-primary);
+    margin-top: 0;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .Update_profile-item {
+    margin-bottom: 15px;
+  }
+  
+  .Update_profile-item label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  
+  /* Input styling with improved responsiveness */
+  .Update_profile-item input,
+  .Update_profile-item textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    box-sizing: border-box; /* Include padding in width calculation */
+  }
+  
+  .Update_profile-item input:focus,
+  .Update_profile-item textarea:focus {
+    border-color: var(--input-focus);
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+    outline: none;
+    background-color: var(--bg-secondary);
+  }
+  
+  /* Multi-entry sections with improved responsiveness */
+  .multi-entry-section {
+    margin-top: 15px;
+    width: 100%;
+  }
+  
+  .multi-entry-input {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    width: 100%;
+  }
+  
+  .multi-entry-input input {
+    flex: 1; /* Allow input to expand */
+    min-width: 0; /* Prevent input from overflowing */
+  }
+  
+  /* Custom metric inputs layout */
+  .custom-metric {
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+  }
+  
+  .custom-metric input {
+    flex: 1;
+    min-width: 120px; /* Minimum width for usability */
+  }
+  
+  .add-button,
+  .remove-button {
+    padding: 8px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0; /* Prevent buttons from shrinking */
+  }
+  
+  .add-button {
+    background: var(--save-button);
+    color: white;
+  }
+  
+  .add-button:hover {
+    background: var(--save-button-hover);
+  }
+  
+  .remove-button {
+    background: var(--error-bg);
+    color: var(--error-text);
+  }
+  
+  .multi-entry-list {
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .multi-entry-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+    word-break: break-word; /* Allow text to wrap on small screens */
+  }
+  
+  .multi-entry-item span {
+    flex: 1;
+    padding-right: 8px;
+  }
+  
+  .empty-list-message {
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 12px;
+    font-style: italic;
+  }
+  
+  /* File input styling */
+  .file-input {
+    padding: 8px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    width: 100%;
+  }
+  
+  .file-selected {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: var(--success-bg);
+    border-radius: 4px;
+    font-size: 14px;
+    color: var(--success-text);
+    word-break: break-all; /* Break long filenames */
+  }
+  
+  /* Success/Error message styling */
+  .Update_profile-item.success,
+  .Update_profile-item.error {
+    padding: 12px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    text-align: center;
+  }
+  
+  .Update_profile-item.success {
+    background-color: var(--success-bg);
+    color: var(--success-text);
+    border: 1px solid var(--success-text);
+  }
+  
+  .Update_profile-item.error {
+    background-color: var(--error-bg);
+    color: var(--error-text);
+    border: 1px solid var(--error-text);
+  }
+  
+  /* Action buttons on modal */
+  .Update_profile-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+  }
+  
+  .cancel-button,
+  .save-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .cancel-button {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+  }
+  
+  .save-button {
+    background: var(--save-button);
+    color: white;
+  }
+  
+  .save-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+  
+  /* Media queries for different screen sizes */
+  @media (max-width: 768px) {
+    .Update_profile-modal {
+      padding: 24px;
+      width: 95%;
+    }
+    
+    .Update_profile-section {
+      padding: 16px;
+    }
+    
+    .Update_profile-header h2 {
+      font-size: 20px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .Update_profile-modal {
+      padding: 16px;
+      width: 100%;
+      max-height: 95vh;
+      border-radius: 12px;
+    }
+    
+    .Update_profile-overlay {
+      padding: 10px;
+    }
+    
+    .Update_profile-content {
+      max-height: calc(95vh - 80px);
+    }
+    
+    .Update_profile-section {
+      padding: 12px;
+    }
+    
+    .Update_profile-item input,
+    .Update_profile-item textarea {
+      padding: 8px 10px;
+    }
+    
+    .multi-entry-input {
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .add-button {
+      align-self: flex-end;
+    }
+    
+    .Update_profile-actions {
+      flex-direction: column-reverse;
+      width: 100%;
+    }
+    
+    .cancel-button,
+    .save-button {
+      width: 100%;
+      padding: 12px;
+    }
+  }

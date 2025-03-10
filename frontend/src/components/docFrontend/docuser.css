@@ -1,7 +1,7 @@
 
     .dashboard-wrapper {
         min-height: 100vh;
-        background-color: #f5f5f5;
+        background-color: var(--bg-primary);
     }
 
     .dashboard-header {
@@ -9,8 +9,8 @@
         justify-content: space-between;
         align-items: center;
         padding: 1rem 2rem;
-        background-color: #fff;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        background-color: var(--bg-secondary);
+        box-shadow: var(--header-shadow);
     }
 
     .profile-section {
@@ -18,8 +18,8 @@
     }
 
     .profile-button {
-        background: #667eea;
-        color: white;
+        background: var(--button-primary);
+        color: var(--button-primary-text);
         border: none;
         padding: 0.5rem 1rem;
         border-radius: 4px;
@@ -30,8 +30,8 @@
         position: absolute;
         right: 0;
         top: 100%;
-        background: white;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        background: var(--bg-secondary);
+        box-shadow: var(--modal-shadow);
         border-radius: 4px;
         padding: 0.5rem;
         margin-top: 0.5rem;
@@ -42,13 +42,13 @@
         width: 100%;
         padding: 0.5rem 1rem;
         border: none;
-        background: none;
+        color: var(--text-primary);
         cursor: pointer;
         text-align: left;
     }
 
     .profile-menu button:hover {
-        background-color: #f5f5f5;
+        background-color: var(--menu-hover);
     }
 
     .dashboard-container {
@@ -56,10 +56,11 @@
     }
 
     .doctor-info {
-        background: white;
+        background: var(--bg-secondary);
+        box-shadow: var(--card-shadow);
         padding: 2rem;
         border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        
     }
 
     .info-grid {
@@ -71,7 +72,7 @@
 
     .info-item {
         padding: 1rem;
-        background-color: #f8f9fa;
+        background-color: var(--bg-tertiary);
         border-radius: 4px;
         display: flex;
         flex-direction: column;
@@ -79,12 +80,12 @@
 
     .info-item label {
         font-weight: bold;
-        color: #666;
+        color: var(--text-secondary);
         margin-bottom: 0.5rem;
     }
 
     .info-item span {
-        color: #333;
+        color: var(--text-primary);    
     }
 
     .loading {

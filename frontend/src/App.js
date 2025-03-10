@@ -12,9 +12,12 @@ import ParaDashboard from './components/paraFrontend/paraDashboard'
 import { AuthProvider } from './contexts/AuthContext';
 import ForgotPassword from "./components/ForgotPassword";
 import PageNotFound from './components/PageNotFound';
+import { ThemeProvider } from './contexts/Theme';
+
 
 function App() {
   return (   
+    <ThemeProvider>
     <AuthProvider>
       <BrowserRouter>
         <Routes>
@@ -40,6 +43,7 @@ function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </ThemeProvider>
   );
 }
    

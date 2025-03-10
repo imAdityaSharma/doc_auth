@@ -40,7 +40,7 @@ export default function LoginPage(){
                     } else if (response.data.role === 'doctor') {
                         navigate('/doc/docDashboard');
                     } else if (response.data.role === 'paramedic') {
-                        navigate('/para/paradashboard');
+                        navigate('/para/dashboard');
                     }
                 }
             })
