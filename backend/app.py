@@ -17,7 +17,7 @@ import json
 from flask_cors import cross_origin
 from decorators import pre_flight_cors
 from decorators import token_required
-
+import random
 from routes.doctorapis import doctor_bp
 from routes.patientapis import patient_bp
 from routes.paraApis import para_bp
@@ -76,73 +76,214 @@ email_server = EmailServer()
 def load_user(user_id):
     return BaseUser.query.get(int(user_id))
 
-@app.route("/send-verification", methods=["GET","POST", "OPTIONS"])
+# @app.route("/send-verification", methods=["GET","POST", "OPTIONS"])
+# def send_verification():
+#     # Handle preflight request
+#     if request.method == "OPTIONS":
+#         return pre_flight_cors()
+        
+#     try:
+#         data = request.get_json()
+#         email = data.get('email')
+#         is_password_change = data.get('isPasswordChange', False)  # New parameter
+#         is_forgot_password = data.get('isForgotPassword',False)
+#         if not email:
+#             return jsonify({"error": "Email is required"}), 400
+            
+#         # Check if email exists
+#         existing_user = BaseUser.query.filter_by(primary_email=email).first()
+        
+#         # For registration, we want to prevent existing emails
+#         # For password change, we want to ensure the email exists
+
+#         """ SECURITY VULNERABILITY NEEDS TO BE FIXED"""
+#         if not is_password_change and existing_user:
+#             return jsonify({"error": "Email already registered"}), 409
+#         elif is_password_change and not existing_user:
+#             return jsonify({"error": "Email not found"}), 404
+#         elif is_forgot_password and existing_user:
+            
+#         """----------------------------------------"""
+#         """FIX, BUT SESSION NOT WORKING
+#         '''
+#         if 'is_password_change' in data:
+#             # Check if user is authenticated through session
+#             if 'user_id' not in session or session['email'] != email:
+#                 return jsonify({"error": "Unauthorized password change request"}), 401
+#         elif existing_user:
+#             return jsonify({"error": "Email already registered"}), 409
+#         '''
+#         ---------------------------------------------"""    
+#         # Generate verification token
+#         verification_token = secrets.token_hex(3)  # 6-digit hex code
+        
+#         # Store verification data in Redis with expiration
+#         verification_data = {
+#             'email': email,
+#             'token': verification_token,
+#             'is_password_change': is_password_change,  # Store the purpose
+#             'expires': (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat()
+#         }
+#         # Use email as key in Redis
+#         redis_key = f"verification:{email}"
+#         redis_client.setex(redis_key, timedelta(minutes=30), json.dumps(verification_data))
+
+#         # Send verification email
+#         if email_server.send_verification_email(email, verification_token):
+#             return jsonify({
+#                 "success": True,
+#                 "message": "Verification code sent successfully",
+#                 "email": email
+#             }), 200
+#         else:
+#             return jsonify({"error": "Failed to send verification email"}), 500
+            
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
+@app.route("/send-verification", methods=["GET", "POST", "OPTIONS"])
 def send_verification():
     # Handle preflight request
     if request.method == "OPTIONS":
         return pre_flight_cors()
-        
+    
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({"error": "Invalid request format"}), 400
+            
         email = data.get('email')
-        is_password_change = data.get('isPasswordChange', False)  # New parameter
+        is_password_change = data.get('isPasswordChange', False)
+        is_forgot_password = data.get('isForgotPassword', False)
         
+        # Validate email presence
         if not email:
             return jsonify({"error": "Email is required"}), 400
             
-        # Check if email exists
+        # Check if email exists in the database
         existing_user = BaseUser.query.filter_by(primary_email=email).first()
         
-        # For registration, we want to prevent existing emails
-        # For password change, we want to ensure the email exists
-
-        """ SECURITY VULNERABILITY NEEDS TO BE FIXED"""
-        if not is_password_change and existing_user:
-            return jsonify({"error": "Email already registered"}), 409
-        elif is_password_change and not existing_user:
-            return jsonify({"error": "Email not found"}), 404
-        """----------------------------------------"""
-        """FIX, BUT SESSION NOT WORKING
-        '''
-        if 'is_password_change' in data:
-            # Check if user is authenticated through session
-            if 'user_id' not in session or session['email'] != email:
-                return jsonify({"error": "Unauthorized password change request"}), 401
-        elif existing_user:
-            return jsonify({"error": "Email already registered"}), 409
-        '''
-        ---------------------------------------------"""    
-        # Generate verification token
-        verification_token = secrets.token_hex(3)  # 6-digit hex code
+        # For forgot password flow, email must exist but we don't tell the user
+        if is_forgot_password:
+            if not existing_user:
+                # Return success even if email doesn't exist (security through obscurity)
+                return jsonify({
+                    "success": True,
+                    "message": "If your email is registered, a verification code has been sent"
+                }), 200
         
-        # Store verification data in Redis with expiration
-        verification_data = {
-            'email': email,
-            'token': verification_token,
-            'is_password_change': is_password_change,  # Store the purpose
-            'expires': (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat()
-        }
-        # Use email as key in Redis
-        redis_key = f"verification:{email}"
-        redis_client.setex(redis_key, timedelta(minutes=30), json.dumps(verification_data))
-
-        # Send verification email
-        if email_server.send_verification_email(email, verification_token):
-            return jsonify({
-                "success": True,
-                "message": "Verification code sent successfully",
-                "email": email
-            }), 200
+        # Generate verification token only if user exists
+        if is_forgot_password:
+            msg = "forgot_password"
+        elif is_password_change:
+            msg = "password_change"
         else:
-            return jsonify({"error": "Failed to send verification email"}), 500
+            msg = "new_user"
+        if existing_user:
+            # Generate numeric OTP
+            verification_token = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+            # Store verification data with proper expiration
+            expiration_minutes = 15
+            verification_data = {
+                'email': email,
+                'token': verification_token,
+                'purpose': msg,
+                'created_at': datetime.now(timezone.utc).isoformat(),
+                'expires_at': (datetime.now(timezone.utc) + timedelta(minutes=expiration_minutes)).isoformat(),
+                'attempts': 0
+            }
+            
+            # Use a unique key per verification request
+            token_id = secrets.token_hex(8)
+            redis_key = f"verification:{email}:{token_id}"
+            
+            # Store in Redis with expiration
+            redis_client.setex(
+                redis_key,
+                timedelta(minutes=expiration_minutes),
+                json.dumps(verification_data)
+            )
+            
+            # Store the latest token_id for this email
+            redis_client.set(f"latest_verification:{email}", token_id)
+            
+            # Send verification email
+            if email_server.send_verification_email(email, verification_token, 'forgot_password' if is_forgot_password else 'changepassword'):
+                return jsonify({
+                    "success": True,
+                    "message": "If your email is registered, a verification code has been sent"
+                }), 200
+            else:
+                # Log the error but don't expose it to the user
+                print(f"Failed to send verification email to {email}")
+                return jsonify({
+                    "success": True,
+                    "message": "If your email is registered, a verification code has been sent"
+                }), 200
+        
+        # Always return success for forgot password flow
+        elif not existing_user:
+            # Generate numeric OTP
+            verification_token = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+            # Store verification data with proper expiration
+            expiration_minutes = 15
+            verification_data = {
+                'email': email,
+                'token': verification_token,
+                'purpose': msg,
+                'created_at': datetime.now(timezone.utc).isoformat(),
+                'expires_at': (datetime.now(timezone.utc) + timedelta(minutes=expiration_minutes)).isoformat(),
+                'attempts': 0
+            }
+            
+            # Use a unique key per verification request
+            token_id = secrets.token_hex(8)
+            redis_key = f"verification:{email}:{token_id}"
+            
+            # Store in Redis with expiration
+            redis_client.setex(
+                redis_key,
+                timedelta(minutes=expiration_minutes),
+                json.dumps(verification_data)
+            )
+            
+            # Store the latest token_id for this email
+            redis_client.set(f"latest_verification:{email}", token_id)
+            
+            # Send verification email
+            if email_server.send_verification_email(email, verification_token,'new_user'):
+                return jsonify({
+                    "success": True,
+                    "message": "A verification code has been sent"
+                }), 200
+            else:
+                # Log the error but don't expose it to the user
+                print(f"Failed to send verification email to {email}")
+                return jsonify({
+                    "success": True,
+                    "message": "If your email is registered, a verification code has been sent"
+                }), 200
+
+        return jsonify({
+            "success": True,
+            "message": "If your email is registered, a verification code has been sent"
+        }), 200
             
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+        print(f"Error in send_verification: {str(e)}")  # Log the actual error
+        return jsonify({
+            "success": False,
+            "message": "An error occurred. Please try again later."
+        }), 500
 @app.route("/verify-email", methods=["POST"])
 def verify_email():
     try:    
         data = request.get_json()
+        if not data:
+            return jsonify({
+                "success": False,
+                "error": "Invalid request format"
+            }), 400
+
         email = data.get('email')
         code = data.get('code')
         
@@ -152,27 +293,55 @@ def verify_email():
                 "error": "Email and verification code are required"
             }), 400
             
-        # Get verification data from Redis
-        redis_key = f"verification:{email}"
+        # Get the latest token_id for this email
+        token_id = redis_client.get(f"latest_verification:{email}")
+        if not token_id:
+            return jsonify({
+                "success": False,
+                "error": "No verification in progress. Please request a new code."
+            }), 400
+
+        # Get verification data using email and token_id
+        redis_key = f"verification:{email}:{token_id.decode('utf-8')}"
         verification_data = redis_client.get(redis_key)
         
         if not verification_data:
             return jsonify({
                 "success": False,
-                "error": "No verification in progress. Please request a new code."
+                "error": "Verification code has expired. Please request a new code."
             }), 400
             
         verification = json.loads(verification_data)
         
-        
         # Check expiration
-        expiry_time = datetime.fromisoformat(verification['expires'].replace('Z', '+00:00'))
+        expiry_time = datetime.fromisoformat(verification['expires_at'])
         if datetime.now(timezone.utc) > expiry_time:
+            # Clean up expired data
             redis_client.delete(redis_key)
+            redis_client.delete(f"latest_verification:{email}")
             return jsonify({
                 "success": False,
                 "error": "Verification code has expired. Please request a new code."
             }), 400
+            
+        # Check attempts
+        max_attempts = 3
+        if verification['attempts'] >= max_attempts:
+            # Clean up after max attempts
+            redis_client.delete(redis_key)
+            redis_client.delete(f"latest_verification:{email}")
+            return jsonify({
+                "success": False,
+                "error": "Maximum verification attempts exceeded. Please request a new code."
+            }), 400
+
+        # Update attempts
+        verification['attempts'] += 1
+        redis_client.setex(
+            redis_key,
+            timedelta(minutes=15),  # Reset expiration time
+            json.dumps(verification)
+        )
             
         # Compare codes
         if verification['token'] != code:
@@ -181,22 +350,40 @@ def verify_email():
                 "error": "Invalid verification code. Please try again."
             }), 400
             
-        # Mark email as verified in Redis
-        redis_client.setex( f"verified:{email}", timedelta(minutes=30), "true")
+        # Get verification purpose
+        purpose = verification.get('purpose', 'email_verification')
+        
+        # Mark email as verified in Redis with purpose
+        verified_data = {
+            'email': email,
+            'purpose': purpose,
+            'verified_at': datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Store verification status with expiration
+        redis_client.setex(
+            f"verified:{email}:{purpose}",
+            timedelta(minutes=30),
+            json.dumps(verified_data)
+        )
+        
+        # Clean up verification data
+        redis_client.delete(redis_key)
+        redis_client.delete(f"latest_verification:{email}")
         
         return jsonify({
             "success": True,
             "message": "Email verified successfully",
-            "email": email
+            "email": email,
+            "purpose": purpose
         }), 200
         
     except Exception as e:
+        print(f"Error in verify_email: {str(e)}")  # Log the error
         return jsonify({
             "success": False,
-            "error": "Failed to verify email",
-            "details": str(e)
+            "error": "An error occurred. Please try again later."
         }), 500
-
 @app.route("/register", methods=["POST"])
 def register():
     if request.method == "POST":    
@@ -508,54 +695,162 @@ def uploaded_file(filename):
         print(f"Error serving file: {str(e)}")
         return jsonify({"error": "File not found"}), 404
 
-@app.route("/password_change", methods = ['POST'])
-@token_required
+@app.route("/password_change", methods=['POST'])
 def password_change():
-    if request.method == "POST":    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Invalid request data"}), 400
+
+        # Extract required fields
+        email = data.get('email')
+        new_password = data.get('newPassword')
+        
+        # Validate required fields
+        if not email or not new_password:
+            return jsonify({
+                "error": "Missing required fields",
+                "details": "Email and new password are required"
+            }), 400
+
+        # Check if user exists
+        existing_user = BaseUser.query.filter_by(primary_email=email).first()
+        if not existing_user:
+            return jsonify({"error": "User not found"}), 404
+
+        # Check if email was verified for password change
+        verified_key = f"verified:{email}:forgot_password"
+        verification_data = redis_client.get(verified_key)
+        
+        if not verification_data:
+            return jsonify({
+                "error": "Email verification required",
+                "details": "Please verify your email before changing password"
+            }), 403
+
+        # Validate password requirements
+        if len(new_password) < 8:
+            return jsonify({
+                "error": "Invalid password",
+                "details": "Password must be at least 8 characters long"
+            }), 400
+
         try:
-            data = request.get_json()
-            if not data:
-                return jsonify({"error": "Invalid request data"}), 400
-            # Extract and validate all required fields
-            required_fields = [
-                'password',
-                'email'
-            ]
-            # Check for missing fields
-            missing_fields = [field for field in required_fields if not data.get(field)]
-            if missing_fields:
-                return jsonify({
-                    "error": "Missing required fields",
-                    "missing_fields": missing_fields
-                }), 400
-
-            email = data.get('email')
-            # Check if user exists
-            existing_user = BaseUser.query.filter_by(primary_email=email).first()
-            if not existing_user:
-                return jsonify({"error": "User not found"}), 404
-
-            try:
-                # Hash new password
-                hashed_password = bcrypt_var.generate_password_hash(data['password']).decode('utf-8')
-                
-                # Update user's password
-                existing_user.password_hash = hashed_password
-                db.session.commit()
-                
-                return jsonify({
-                    "success": True,
-                    "message": "Password updated successfully"
-                }), 200
-                    
-            except Exception as db_error:
-                db.session.rollback()
-                return jsonify({"error": "Database error occurred"}), 500
-
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
+            # Hash new password
+            hashed_password = bcrypt_var.generate_password_hash(new_password).decode('utf-8')
             
-    return jsonify({"error": "Method not allowed"}), 405
+            # Update user's password
+            existing_user.password_hash = hashed_password
+            db.session.commit()
+            
+            # Clear all verification and session data for security
+            redis_client.delete(verified_key)
+            redis_client.delete(f"verified:{email}:*")
+            
+            # Clear any active sessions for this user
+            user_sessions_pattern = f"session:*:{existing_user.id}:*"
+            for key in redis_client.scan_iter(match=user_sessions_pattern):
+                redis_client.delete(key)
+            
+            return jsonify({
+                "success": True,
+                "message": "Password updated successfully. Please login with your new password."
+            }), 200
+                
+        except Exception as db_error:
+            print(f"Database error in password_change: {str(db_error)}")
+            db.session.rollback()
+            return jsonify({
+                "error": "Failed to update password",
+                "details": "A database error occurred"
+            }), 500
+
+    except Exception as e:
+        print(f"Error in password_change: {str(e)}")
+        return jsonify({
+            "error": "An unexpected error occurred",
+            "details": "Please try again later"
+        }), 500
+
+
+
+
+
+# healper Functions
+def is_valid_email(email):
+    """Validate email format"""
+    # Basic email validation with regex
+    import re
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
+
+def verify_authenticated_user(email):
+    """Verify if the current user is authorized to change password for this email"""
+    if 'user_id' not in session:
+        return False
+    
+    # Get user from session and compare emails
+    user_id = session.get('user_id')
+    user = BaseUser.query.get(user_id)
+    return user and user.primary_email == email
+
+def generate_numeric_otp(length=6):
+    """Generate a numeric OTP of specified length"""
+    return ''.join(secrets.choice("0123456789") for _ in range(length))
+
+def get_verification_purpose(is_password_change, is_forgot_password):
+    """Get the purpose of verification for better tracking"""
+    if is_forgot_password:
+        return "forgot_password"
+    elif is_password_change:
+        return "password_change"
+    else:
+        return "registration"
+
+def get_email_template_type(is_password_change, is_forgot_password):
+    """Get the appropriate email template based on verification purpose"""
+    if is_forgot_password:
+        return "forgot_password_template"
+    elif is_password_change:
+        return "password_change_template"
+    else:
+        return "registration_template"
+
+def is_rate_limited(email):
+    """Check if the email is being rate limited for verification requests"""
+    rate_limit_key = f"rate_limit:verification:{email}"
+    count = redis_client.get(rate_limit_key)
+    
+    if count is None:
+        # First request in the window
+        redis_client.setex(rate_limit_key, 3600, 1)  # 1 hour window
+        return False
+        
+    count = int(count)
+    if count >= 5:  # Max 5 verification emails per hour
+        return True
+        
+    # Increment the counter
+    redis_client.incr(rate_limit_key)
+    return False
+
+def log_verification_attempt(email, template_type):
+    """Log verification attempt for auditing"""
+    # Implementation depends on your logging system
+    pass
+
+def log_error(message):
+    """Log error messages"""
+    # Implementation depends on your logging system
+    pass
+
+def log_exception(function_name, exception):
+    """Log exceptions with context"""
+    # Implementation depends on your logging system
+    pass
+
+
+
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)

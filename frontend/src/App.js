@@ -10,6 +10,8 @@ import PatientDashboard from './components/patientfrontend/patientDashboard'
 import DocDashboard from './components/docFrontend/docdashboard'
 import ParaDashboard from './components/paraFrontend/paraDashboard'
 import { AuthProvider } from './contexts/AuthContext';
+import ForgotPassword from "./components/ForgotPassword";
+import PageNotFound from './components/PageNotFound';
 
 function App() {
   return (   
@@ -29,8 +31,12 @@ function App() {
 
             <Route path="/doc/docDashboard" element={<DocDashboard />} />
             <Route path="/doc" element={<DocDashboard />} />
+
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             
-            
+
+
+            <Route path="*" element={<PageNotFound />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

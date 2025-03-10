@@ -32,8 +32,8 @@ const AccountSecurity = ({ onClose }) => {
     
             const response = await axios.post('http://localhost:5000/send-verification', 
                 { 
-                    email,
-                    isPasswordChange: true  // Add this flag
+                    email:email,
+                    isForgotPassword: true  // Add this flag
                 },
                 {
                     withCredentials: true,
@@ -62,7 +62,7 @@ const AccountSecurity = ({ onClose }) => {
 
             const response = await axios.post('http://localhost:5000/verify-email',
                 {
-                    email,
+                    email:email,
                     code: verificationCode
                 },
                 {
@@ -99,7 +99,7 @@ const AccountSecurity = ({ onClose }) => {
             const response = await axios.post('http://localhost:5000/password_change',
                 {
                     email,
-                    password: newPassword
+                    newPassword: newPassword
                 },
                 {
                     withCredentials: true,
