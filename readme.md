@@ -45,7 +45,7 @@ A comprehensive healthcare management system with role-based access for patients
 - [x] Dashboard data endpoint
 - [x] Profile information
 - [ ] Appointment management
-- [ ] Medical records access
+- [x] Medical records access
 
 #### Doctor APIs 🟨
 - [x] Dashboard data endpoint
@@ -64,8 +64,8 @@ A comprehensive healthcare management system with role-based access for patients
 - [x] User base model
 - [x] Role-specific models
 - [ ] Appointments table
-- [ ] Prescriptions table
-- [ ] Medical records table
+- [x] Prescriptions table
+- [x] Medical records table
 - [ ] Emergency cases table
 
 ### Frontend Features
@@ -73,7 +73,7 @@ A comprehensive healthcare management system with role-based access for patients
 - [x] Role-based routing
 - [x] Profile management
 - [x] Settings interface
-- [ ] Dark mode
+- [x] Dark mode
 - [ ] Notifications system
 - [x] File upload system
 
