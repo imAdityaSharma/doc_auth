@@ -1,0 +1,352 @@
+/* Overlay container */
+.health-metric-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 10px;
+  overflow: hidden;
+}
+
+.health-metric-modal {
+  background: var(--bg-secondary);
+  padding: 20px;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  position: relative;
+  z-index: 10000;
+  box-shadow: var(--modal-shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+.health-metric-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.health-metric-header h2 {
+  font-size: 22px;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: color 0.3s;
+}
+
+.close-button:hover {
+  color: var(--error-text);
+}
+
+/* Scrollable content */
+.health-metric-content {
+  overflow-y: auto;
+  max-height: calc(90vh - 100px);
+  padding-right: 10px;
+  margin-right: -10px;
+  flex-grow: 1;
+}
+
+/* Scrollbar styling */
+.health-metric-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.health-metric-content::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+
+.health-metric-content::-webkit-scrollbar-thumb {
+  background: var(--text-secondary);
+  border-radius: 4px;
+}
+
+.health-metric-content::-webkit-scrollbar-thumb:hover {
+  background: var(--text-primary);
+}
+
+/* Form sections styling */
+.health-metric-section {
+  margin-bottom: 20px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: var(--card-shadow);
+}
+
+.health-metric-section-title {
+  font-size: 16px;
+  color: var(--text-primary);
+  margin-top: 0;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.health-metric-item {
+  margin-bottom: 12px;
+}
+
+.health-metric-item label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* Input styling - responsive */
+.health-metric-item input,
+.health-metric-item textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  background-color: var(--input-bg);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.health-metric-item input:focus,
+.health-metric-item textarea:focus {
+  border-color: var(--input-focus);
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+  outline: none;
+  background-color: var(--bg-secondary);
+}
+
+/* Multi-entry sections */
+.multi-entry-section {
+  margin-top: 12px;
+}
+
+.multi-entry-input {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.multi-entry-input input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.custom-metric input {
+  flex: 1;
+  min-width: 100px;
+}
+
+.add-button,
+.remove-button {
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.add-button {
+  background: var(--save-button);
+  color: white;
+}
+
+.add-button:hover {
+  background: var(--save-button-hover);
+}
+
+.remove-button {
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
+.multi-entry-list {
+  max-height: 150px;
+  overflow-y: auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.multi-entry-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+  flex-wrap: wrap;
+}
+
+.multi-entry-item span {
+  word-break: break-word;
+  flex: 1;
+  margin-right: 8px;
+}
+
+.empty-list-message {
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 12px;
+  font-style: italic;
+}
+
+/* File input styling */
+.file-input {
+  padding: 8px;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  width: 100%;
+}
+
+.file-selected {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--success-bg);
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--success-text);
+  word-break: break-all;
+}
+
+/* Success/Error message styling */
+.health-metric-item.success,
+.health-metric-item.error {
+  padding: 12px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.health-metric-item.success {
+  background-color: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-text);
+}
+
+.health-metric-item.error {
+  background-color: var(--error-bg);
+  color: var(--error-text);
+  border: 1px solid var(--error-text);
+}
+
+/* Action buttons at the bottom */
+.health-metric-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid var(--border-color);
+}
+
+.cancel-button, 
+.save-button {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.cancel-button {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.save-button {
+  background: var(--save-button);
+  color: white;
+}
+
+.save-button:hover {
+  background: var(--save-button-hover);
+}
+
+.save-button:disabled {
+  background: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .health-metric-modal {
+    padding: 15px;
+    width: 95%;
+  }
+  
+  .health-metric-header h2 {
+    font-size: 18px;
+  }
+  
+  .health-metric-section {
+    padding: 12px;
+  }
+  
+  .multi-entry-input {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .custom-metric {
+    flex-direction: column;
+  }
+  
+  .add-button {
+    align-self: flex-end;
+  }
+  
+  .health-metric-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  
+  .cancel-button, 
+  .save-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .health-metric-modal {
+    padding: 10px;
+    max-height: 95vh;
+  }
+  
+  .health-metric-content {
+    max-height: calc(95vh - 80px);
+  }
+  
+  .health-metric-section-title {
+    font-size: 15px;
+  }
+}

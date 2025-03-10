@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/Theme';
 import './styles/Settings.css';
+import { FaAlignRight } from 'react-icons/fa';
 
 const Settings = ({ onClose }) => {
   const { userRole } = useAuth();
+  const { isDarkMode, toggleDarkMode } = useTheme();
+  
   const [settings, setSettings] = useState({
     notifications: false,
-    darkMode: false,
     emailUpdates: false,
     showOnlineStatus: false,
     emergencyAlerts: false,
@@ -14,40 +17,39 @@ const Settings = ({ onClose }) => {
   });
 
   const handleChange = (setting) => {
-    setSettings(prev => ({
-      ...prev,
-      [setting]: !prev[setting]
-    }));
-  };
-
-  const handleSave = () => {
-    console.log('Saving settings:', settings);
-    onClose();
+    if (setting === 'darkMode') {
+      toggleDarkMode();
+    } else {
+      setSettings(prev => ({
+        ...prev,
+        [setting]: !prev[setting]
+      }));
+    }
   };
 
   return (
-    <div className="settings-overlay">
-      <div className="settings-modal">
-        <div className="settings-header">
+    <div className="app-settings-overlay">
+      <div className="app-settings-modal">
+        <div className="app-settings-header">
           <h2>Settings</h2>
-          <button className="close-button" onClick={onClose}>&times;</button>
+          <button className="app-close-button" onClick={onClose}>&times;</button>
         </div>
         
-        <div className="settings-content">
-          <div className="settings-section">
-            <h3 className="settings-section-title">General</h3>
-            <div className="setting-item">
+        <div className="app-settings-content">
+          <div className="app-settings-section">
+            <h3 className="app-settings-section-title">General</h3>
+            <div className="app-setting-item">
               <label>
                 <span>Dark Mode</span>
                 <input
                   type="checkbox"
-                  checked={settings.darkMode}
+                  checked={isDarkMode}
                   onChange={() => handleChange('darkMode')}
                 />
               </label>
             </div>
 
-            <div className="setting-item">
+            <div className="app-setting-item">
               <label>
                 <span>Notifications</span>
                 <input
@@ -58,7 +60,7 @@ const Settings = ({ onClose }) => {
               </label>
             </div>
 
-            <div className="setting-item">
+            <div className="app-setting-item">
               <label>
                 <span>Email Updates</span>
                 <input
@@ -71,9 +73,9 @@ const Settings = ({ onClose }) => {
           </div>
 
           {userRole === 'paramedic' && (
-            <div className="settings-section">
-              <h3 className="settings-section-title">Paramedic Settings</h3>
-              <div className="setting-item">
+            <div className="app-settings-section">
+              <h3 className="app-settings-section-title">Paramedic Settings</h3>
+              <div className="app-setting-item">
                 <label>
                   <span>Show Online Status</span>
                   <input
@@ -83,7 +85,7 @@ const Settings = ({ onClose }) => {
                   />
                 </label>
               </div>
-              <div className="setting-item">
+              <div className="app-setting-item">
                 <label>
                   <span>Emergency Alerts</span>
                   <input
@@ -93,7 +95,7 @@ const Settings = ({ onClose }) => {
                   />
                 </label>
               </div>
-              <div className="setting-item">
+              <div className="app-setting-item">
                 <label>
                   <span>Sound Alerts</span>
                   <input
@@ -105,15 +107,6 @@ const Settings = ({ onClose }) => {
               </div>
             </div>
           )}
-        </div>
-
-        <div className="settings-actions">
-          <button className="cancel-button" onClick={onClose}>
-            Cancel
-          </button>
-          <button className="save-button" onClick={handleSave}>
-            Save Changes
-          </button>
         </div>
       </div>
     </div>

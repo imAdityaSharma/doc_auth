@@ -8,6 +8,7 @@ import SecureImage from '../common/SecureImage';
 import axiosInstance from '../../utils/axios'; // Import axiosInstance
 import AccountSecurity from '../overlays/AccountSecurity';
 
+
 const ParaDashboard = () => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
@@ -62,12 +63,28 @@ const ParaDashboard = () => {
 
     const handleLogout = async () => {
         try {
-            await axiosInstance.post('/logout');
+            // Call logout endpoint
+            await axios.post(`http://127.0.0.1:5000/logout`, {}, {
+                withCredentials: true,
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            // Clear local storage
             localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            // Clear any other stored data
+            sessionStorage.clear();
+            // Update auth context
+            
+            // Redirect to login
             navigate('/login');
-        } catch (err) {
-            console.error('Logout error:', err);
-            setError('Failed to log out. Please try again.');
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Still clear local data even if server request fails
+            localStorage.clear();
+            sessionStorage.clear();
+            navigate('/login');
         }
     };
 

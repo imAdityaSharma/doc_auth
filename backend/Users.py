@@ -48,29 +48,17 @@ class BaseUser(UserMixin, db.Model):
     preferred_2fa_method = db.Column(db.String(20))  # 'app', 'sms', or 'email'
     
     # Verification Fields
-    email_verified = db.Column(db.Boolean, default=False)
-    email_verification_token = db.Column(db.String(100))
-    email_verification_sent_at = db.Column(db.DateTime)
     
     phone_verified = db.Column(db.Boolean, default=False)
-    phone_verification_code = db.Column(db.String(6))
-    phone_verification_sent_at = db.Column(db.DateTime)
     
     # Account Security
     failed_login_attempts = db.Column(db.Integer, default=0)
-    last_failed_login = db.Column(db.DateTime)
     account_locked_until = db.Column(db.DateTime)
-    password_changed_at = db.Column(db.DateTime)
 
     def __init__(self, **kwargs):
         super(BaseUser, self).__init__(**kwargs)
         if not self.two_factor_secret:
             self.two_factor_secret = pyotp.random_base32()
-
-    def set_password(self, password):
-        """Hashes and stores the password securely."""
-        self.password_hash = generate_password_hash(password)
-
 
     __mapper_args__ = {
         'polymorphic_identity': 'base_user',
@@ -103,45 +91,9 @@ class BaseUser(UserMixin, db.Model):
     #     self.backup_codes = json.dumps(codes)
     #     return codes
 
-    # Email Verification Methods
-
-    # Phone Verification Methods
-    # def generate_phone_verification_code(self):
-    #     """Generate a new phone verification code"""
-    #     import random
-    #     self.phone_verification_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
-    #     self.phone_verification_sent_at = datetime.utcnow()
-    #     db.session.commit()
-    #     return self.phone_verification_code
-
-    # def verify_phone(self, code):
-    #     """Verify phone with code"""
-    #     if code == self.phone_verification_code:
-    #         if self.phone_verification_sent_at + timedelta(minutes=10) > datetime.utcnow():
-    #             self.phone_verified = True
-    #             self.phone_verification_code = None
-    #             db.session.commit()
-    #             return True
-    #     return False
+ 
 
     # Account Security Methods
-    def record_failed_login(self):
-        """Record a failed login attempt"""
-        self.failed_login_attempts += 1
-        self.last_failed_login = datetime.now(timezone.utc)
-        
-        # Lock account after 5 failed attempts
-        if self.failed_login_attempts >= 5:
-            self.account_locked_until = datetime.now(timezone.utc) + timedelta(minutes=30)
-        
-        db.session.commit()
-
-    def reset_failed_login_attempts(self):
-        """Reset failed login attempts after successful login"""
-        self.failed_login_attempts = 0
-        self.last_failed_login = None
-        self.account_locked_until = None
-        db.session.commit()
 
     def is_account_locked(self):
         """Check if account is locked"""
@@ -153,14 +105,6 @@ class BaseUser(UserMixin, db.Model):
             db.session.commit()
         return False
 
-    # Password Management
-    def change_password(self, new_password):
-        """Change user password and record the time"""
-        from app import bcrypt_var
-        self.password_hash = bcrypt_var.generate_password_hash(new_password).decode('utf-8')
-        self.password_changed_at = datetime.now(timezone.utc)
-        db.session.commit()
-
 # --- Patient Model ---
 class Patient(BaseUser):
     __tablename__ = "patients"
@@ -168,18 +112,18 @@ class Patient(BaseUser):
     id = db.Column(db.Integer, db.ForeignKey("base_users.id"), primary_key=True)
     
     # Medical History
-    allergies = db.Column(db.Text)  # JSON list of allergies
-    chronic_conditions = db.Column(db.Text)  # JSON list of conditions
-    medications = db.Column(db.Text)  # JSON list of current medications
-    past_surgeries = db.Column(db.Text)  # JSON list of past surgeries
-    medical_docs = db.Column(db.Text)  # URLs to past medical documents (optional)
+    allergies = db.Column(db.Text,default='')  # JSON list of allergies
+    chronic_conditions = db.Column(db.Text,default='')  # JSON list of conditions
+    medications = db.Column(db.Text,default='')  # JSON list of current medications
+    past_surgeries = db.Column(db.Text,default='')  # JSON list of past surgeries
+    medical_docs = db.Column(db.Text,default='')  # URLs to past medical documents (optional)
     
     # Health Metrics
-    weight = db.Column(db.Float)
-    height = db.Column(db.Float)
-    blood_pressure = db.Column(db.String(20))
-    blood_glucose = db.Column(db.String(20))
-    additional_metrics = db.Column(db.Text)  # JSON object for custom metrics
+    weight = db.Column(db.Float,default=0)
+    height = db.Column(db.Float,default=0)
+    blood_pressure = db.Column(db.String(20),default='')
+    blood_glucose = db.Column(db.String(20),default='')
+    additional_metrics = db.Column(db.Text,default='')  # JSON object for custom metrics
 
     __mapper_args__ = {
         'polymorphic_identity': 'patient'
@@ -193,22 +137,22 @@ class Doctor(BaseUser):
     
     # Professional Information
     medical_license = db.Column(db.String(50), unique=True, nullable=False)
-    specialty = db.Column(db.String(100))
-    years_experience = db.Column(db.Integer)
-    organization = db.Column(db.String(100))
+    specialty = db.Column(db.String(100),default='')
+    years_experience = db.Column(db.Integer,default=0)
+    organization = db.Column(db.String(100),default='')
 
     # Clinical Data
-    patient_list = db.Column(db.Text)  # JSON list of assigned patients
-    treatment_plans = db.Column(db.Text)  # JSON object for treatments & progress notes
-    lab_results = db.Column(db.Text)  # JSON list of lab reports
+    patient_list = db.Column(db.Text,default='')  # JSON list of assigned patients
+    treatment_plans = db.Column(db.Text,default='')  # JSON object for treatments & progress notes
+    lab_results = db.Column(db.Text,default='')  # JSON list of lab reports
 
     # Education & Training
-    medical_school = db.Column(db.String(100))
-    residency = db.Column(db.String(100))
-    continuing_education = db.Column(db.Text)  # JSON list of certifications
+    medical_school = db.Column(db.String(100),default='')
+    residency = db.Column(db.String(100),default='')
+    continuing_education = db.Column(db.Text,default='')  # JSON list of certifications
 
     # Availability
-    availability_schedule = db.Column(db.Text)  # JSON object with availability slots
+    availability_schedule = db.Column(db.Text,default='')  # JSON object with availability slots
 
     __mapper_args__ = {
         'polymorphic_identity': 'doctor'
@@ -222,17 +166,17 @@ class Paramedic(BaseUser):
     
     # Professional Information
     emt_certification_number = db.Column(db.String(50), unique=True, nullable=False)
-    years_experience = db.Column(db.Integer)
+    years_experience = db.Column(db.Integer,default=0)
 
     # Incident Data
-    emergency_responses = db.Column(db.Text)  # JSON list of emergencies responded to
-    patient_vitals = db.Column(db.Text)  # JSON object for vitals recorded
-    incident_reports = db.Column(db.Text)  # JSON list of reports
+    emergency_responses = db.Column(db.Text,default="")  # JSON list of emergencies responded to
+    patient_vitals = db.Column(db.Text,default="")  # JSON object for vitals recorded
+    incident_reports = db.Column(db.Text,default="")  # JSON list of reports
 
     # Training & Certifications
-    certification_level = db.Column(db.String(50))  # EMT-B, EMT-I, EMT-P
-    als_bls_training = db.Column(db.String(50))  # ALS/BLS training
-    additional_certifications = db.Column(db.Text)  # JSON list of certifications
+    certification_level = db.Column(db.String(50),default="")  # EMT-B, EMT-I, EMT-P
+    als_bls_training = db.Column(db.String(50),default="")  # ALS/BLS training
+    additional_certifications = db.Column(db.Text,default='')  # JSON list of certifications
 
     __mapper_args__ = {
         'polymorphic_identity': 'paramedic'

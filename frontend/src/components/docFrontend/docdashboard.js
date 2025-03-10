@@ -6,6 +6,7 @@ import Settings from '../overlays/Settings';
 import UpdateProfile from '../overlays/UpdateProfile';
 import SecureImage from '../common/SecureImage'; 
 import AccountSecurity from '../overlays/AccountSecurity';
+import { useAuth } from '../../contexts/AuthContext';
 
 const DocDashboard = () => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -17,6 +18,7 @@ const DocDashboard = () => {
     const [error] = useState(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+    const { logout } = useAuth();
 
     useEffect(() => {
         const fetchDoctorData = async () => {
@@ -44,7 +46,7 @@ const DocDashboard = () => {
                 setDoctorData({
                   ...response.data,
                   profile_pic: response.data.profile_pic ? `http://127.0.0.1:5000${response.data.profile_pic}` :'/default-profile.png',
-                  first_name: response.data.name,
+                  first_name: response.data.first_name,
                   last_name: response.data.last_name,
                   primary_contact: response.data.primary_contact,
                   email: response.data.email,
@@ -75,13 +77,13 @@ const DocDashboard = () => {
     }, []);
 
     const handleLogout = async () => {
-        try {
-            await axios.post('http://localhost:5000/logout');
-            localStorage.removeItem('token');
-            navigate('/login');
-        } catch (err) {
-            console.error('Logout error:', err);
-        }
+      try {
+          await logout();
+          navigate('/login');
+      } catch (error) {
+          console.error('Logout error:', error);
+          navigate('/login');
+      }
     };
     const handleSettingsClick = () => {
         setShowSettings(true);

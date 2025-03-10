@@ -1,3 +1,24 @@
 frontend/node_modules/*
 *.pyc
 LICENSE
+backedn/uploads/*
+# Start Generation Here
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+*.zip
+*.rar
+*.tar
+*.gz
+.env
+

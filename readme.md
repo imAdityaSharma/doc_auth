@@ -131,27 +131,9 @@ A comprehensive healthcare management system with role-based access for patients
 ## Setup Instructions
 
 1. Clone the repository
-2. Set up the database:
+2. Run Application with:
    ```bash
-   docker-compose up -d db
-   ```
-3. Install backend dependencies:
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   ```
-4. Install frontend dependencies:
-   ```bash
-   cd frontend
-   npm install
-   ```
-5. Run the application:
-   ```bash
-   # Backend
-   python app.py
-
-   # Frontend
-   npm start
+   docker-compose docker-compose.yml
    ```
 
 

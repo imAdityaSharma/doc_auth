@@ -6,13 +6,15 @@ import Settings from '../overlays/Settings';
 import UpdateProfile from '../overlays/UpdateProfile';
 import SecureImage from '../common/SecureImage'; 
 import AccountSecurity from '../overlays/AccountSecurity';
-
+import UpdateHealthMetrics from '../overlays/UpdateHealthMetrics';
+import { FaEdit } from 'react-icons/fa';
 
 export default function PatientDashboard() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showUpdateProfile, setShowUpdateProfile] = useState(false); 
   const [showAccountSecurity, setAccountSecurity] = useState(false);
+  const [showHealthMetricsModal, setShowHealthMetricsModal] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('/default-profile.png');
   const navigate = useNavigate();
   const [patientData, setPatientData] = useState({
@@ -20,7 +22,10 @@ export default function PatientDashboard() {
     age: null,
     profile_pic: '/default-profile.png',
     upcomingAppointments: [],
-    recentPrescriptions: []
+    recentPrescriptions: [],
+    bloodPressure: '120/80',
+    heartRate: '72 bpm',
+    weight: '70 kg'
   });
 
   React.useEffect(() => {
@@ -39,14 +44,10 @@ export default function PatientDashboard() {
             'Authorization': `Bearer ${token}`
           }
         });
-        // Set profile pic URL from response
-        // const profilePicUrl = response.data.profile_pic ? 
-        //   `http://127.0.0.1:5000${response.data.profile_pic}` :
-        //   '/default-profile.png';
 
         setPatientData({
           ...response.data,
-          profile_pic: response.data.profile_pic ? `http://127.0.0.1:5000${response.data.profile_pic}` :'/default-profile.png'
+          profile_pic: response.data.profile_pic ? `http://127.0.0.1:5000${response.data.profile_pic}` : '/default-profile.png'
         });
         if (response.data.profile_pic) {
           setPreviewUrl(response.data.profile_pic);
@@ -66,28 +67,28 @@ export default function PatientDashboard() {
     fetchPatientData();
   }, [navigate]);
 
-  // Mock patient data - replace with actual API call
-
-const handleSettingsClick = () => {
+  const handleSettingsClick = () => {
     setShowSettings(true);
   };
-const handleAccountSettingsClick = () => {
-    setShowUpdateProfile(true);  // Updated function to use new state variable name
+  const handleAccountSettingsClick = () => {
+    setShowUpdateProfile(true);
   };
-const handleAccountSecurityClick =() =>{
+  const handleAccountSecurityClick = () => {
     setShowProfileMenu(false);
     setAccountSecurity(true);
-}
-const closeSettings = () => {
+  };
+  const closeSettings = () => {
     setShowSettings(false);
-};
-
-const closeUpdateProfile = () => {
+  };
+  const closeUpdateProfile = () => {
     setShowUpdateProfile(false);
-};
-const closeAccountSecurity = () => {
-  setAccountSecurity(false);
-};
+  };
+  const closeAccountSecurity = () => {
+    setAccountSecurity(false);
+  };
+  const closeHealthMetricsModal = () => {
+    setShowHealthMetricsModal(false);
+  };
 
   const handleLogout = async () => {
     try {
@@ -150,6 +151,30 @@ const closeAccountSecurity = () => {
         </div>
 
         <div className="dashboard-grid">
+          {/* Health Metrics Section */}
+          <div className="dashboard-card">
+            <h3>Health Metrics
+              <FaEdit 
+                style={{ cursor: 'pointer', float: 'right' }} 
+                onClick={() => setShowHealthMetricsModal(true)} 
+              />
+            </h3>
+            <div className="metrics-grid">
+              <div className="metric-item">
+                <span className="metric-label">Blood Pressure</span>
+                <span className="metric-value">{patientData.bloodPressure}</span>
+              </div>
+              <div className="metric-item">
+                <span className="metric-label">Heart Rate</span>
+                <span className="metric-value">{patientData.heartRate}</span>
+              </div>
+              <div className="metric-item">
+                <span className="metric-label">Weight</span>
+                <span className="metric-value">{patientData.weight}</span>
+              </div>
+            </div>
+          </div>
+
           {/* Appointments Section */}
           <div className="dashboard-card">
             <h3>Upcoming Appointments</h3>
@@ -179,25 +204,6 @@ const closeAccountSecurity = () => {
               ))}
             </div>
           </div>
-
-          {/* Health Metrics Section */}
-          <div className="dashboard-card">
-            <h3>Health Metrics</h3>
-            <div className="metrics-grid">
-              <div className="metric-item">
-                <span className="metric-label">Blood Pressure</span>
-                <span className="metric-value">120/80</span>
-              </div>
-              <div className="metric-item">
-                <span className="metric-label">Heart Rate</span>
-                <span className="metric-value">72 bpm</span>
-              </div>
-              <div className="metric-item">
-                <span className="metric-label">Weight</span>
-                <span className="metric-value">70 kg</span>
-              </div>
-            </div>
-          </div>
         </div>
       </main>
 
@@ -211,12 +217,17 @@ const closeAccountSecurity = () => {
         <Settings onClose={() => setShowSettings(false)} />
       )}
       {/* UpdateProfile Modal */}
-      {showUpdateProfile && (  // Updated condition
-        <UpdateProfile onClose={() => setShowUpdateProfile(false)} />  // Updated handler
+      {showUpdateProfile && (
+        <UpdateProfile onClose={() => setShowUpdateProfile(false)} />
       )}
+      {/* Account Security Modal */}
       {showAccountSecurity && (
-                <AccountSecurity onClose={closeAccountSecurity} />
-            )}
+        <AccountSecurity onClose={closeAccountSecurity} />
+      )}
+      {/* Update Health Metrics Modal */}
+      {showHealthMetricsModal && (
+        <UpdateHealthMetrics onClose={closeHealthMetricsModal} />
+      )}
     </div>
   );
 }

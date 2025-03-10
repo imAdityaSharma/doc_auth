@@ -6,48 +6,69 @@ services:
     container_name: postgres_db
     restart: always
     environment:
-      POSTGRES_USER: Admin
-      POSTGRES_PASSWORD: Admin
-      POSTGRES_DB: MaxRayUsers
+      POSTGRES_USER: ${DB_USER:-Admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-Admin}
+      POSTGRES_DB: ${DB_NAME:-MaxRayUsers}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-Admin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./backend
     container_name: flask_backend
     ports:
-      - "5000:5000"
+      - "${BACKEND_PORT:-5000}:5000"
     environment:
-      - FLASK_ENV=development
-      - DATABASE_URL=postgresql://Admin:Admin@db:5432/MaxRayUsers
-      - REDIS_URL=redis://redis:6379
+      - FLASK_ENV=${FLASK_ENV:-development}
+      - DATABASE_URL=postgresql://${DB_USER:-Admin}:${DB_PASSWORD:-Admin}@db:5432/${DB_NAME:-MaxRayUsers}
+      - REDIS_URL=${REDIS_URL}
+      - SECRET_KEY=${SECRET_KEY}
+      - EMAIL_ADDRESS=${EMAIL_ADDRESS}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
     volumes:
       - ./backend:/app
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
     container_name: react_frontend
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=${NODE_ENV:-development}
+      - REACT_APP_API_URL=http://localhost:${BACKEND_PORT:-5000}
     stdin_open: true
     tty: true
+    depends_on:
+      - backend
+    restart: unless-stopped
 
   redis:
     image: redis:alpine
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
 volumes:
   postgres_data:

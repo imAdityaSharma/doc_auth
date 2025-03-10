@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import './styles/acc_preferences.css';
+import './styles/AccountSecurity.css';
 
 const AccountSecurity = ({ onClose }) => {
     const [email, setEmail] = useState(localStorage.getItem('userEmail') || '');
@@ -32,8 +32,8 @@ const AccountSecurity = ({ onClose }) => {
     
             const response = await axios.post('http://localhost:5000/send-verification', 
                 { 
-                    email,
-                    isPasswordChange: true  // Add this flag
+                    email:email,
+                    isForgotPassword: true  // Add this flag
                 },
                 {
                     withCredentials: true,
@@ -62,7 +62,7 @@ const AccountSecurity = ({ onClose }) => {
 
             const response = await axios.post('http://localhost:5000/verify-email',
                 {
-                    email,
+                    email:email,
                     code: verificationCode
                 },
                 {
@@ -99,7 +99,7 @@ const AccountSecurity = ({ onClose }) => {
             const response = await axios.post('http://localhost:5000/password_change',
                 {
                     email,
-                    password: newPassword
+                    newPassword: newPassword
                 },
                 {
                     withCredentials: true,
@@ -124,19 +124,19 @@ const AccountSecurity = ({ onClose }) => {
     };
 
     return (
-        <div className="settings-overlay">
-            <div className="settings-modal">
-                <div className="settings-header">
+        <div className="security-overlay">
+            <div className="security-modal">
+                <div className="security-header">
                     <h2>Account Security</h2>
-                    <button className="close-button" onClick={onClose}>&times;</button>
+                    <button className="security-close-button" onClick={onClose}>&times;</button>
                 </div>
-
-                <div className="settings-content">
-                    <div className="settings-section">
+    
+                <div className="security-content">
+                    <div className="security-section">
                         <h3>Change Password</h3>
-
+    
                         {step === 1 && (
-                            <div className="setting-item">
+                            <div className="security-item">
                                 <label>Email Address</label>
                                 <input
                                     type="email"
@@ -148,15 +148,15 @@ const AccountSecurity = ({ onClose }) => {
                                 <button 
                                     onClick={sendVerificationCode}
                                     disabled={isLoading || !email}
-                                    className="verify-button"
+                                    className="Security-verify-button"
                                 >
                                     {isLoading ? 'Sending...' : 'Send Verification Code'}
                                 </button>
                             </div>
                         )}
-
+    
                         {step === 2 && (
-                            <div className="setting-item">
+                            <div className="security-item">
                                 <label>Verification Code</label>
                                 <input
                                     type="text"
@@ -168,15 +168,15 @@ const AccountSecurity = ({ onClose }) => {
                                 <button 
                                     onClick={verifyCode}
                                     disabled={isLoading || !verificationCode}
-                                    className="verify-button"
+                                    className="Security-verify-button"
                                 >
                                     {isLoading ? 'Verifying...' : 'Verify Code'}
                                 </button>
                             </div>
                         )}
-
+    
                         {step === 3 && (
-                            <form onSubmit={handlePasswordChange} className="setting-item">
+                            <form onSubmit={handlePasswordChange} className="security-item">
                                 <label>New Password</label>
                                 <input
                                     type="password"
@@ -196,13 +196,13 @@ const AccountSecurity = ({ onClose }) => {
                                 <button 
                                     type="submit"
                                     disabled={isLoading || !newPassword || !confirmPassword}
-                                    className="save-button"
+                                    className="Security-save-button"
                                 >
                                     {isLoading ? 'Updating...' : 'Update Password'}
                                 </button>
                             </form>
                         )}
-
+    
                         {message && <div className="success-message">{message}</div>}
                         {error && <div className="error-message">{error}</div>}
                     </div>

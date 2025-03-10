@@ -5,7 +5,7 @@ from flask import send_from_directory, make_response
 from datetime import datetime, timedelta, timezone
 from flask_login import LoginManager, login_user
 from database import db, create_app
-from Users import BaseUser
+from Users import BaseUser, Paramedic, Patient, Doctor
 import jwt
 from flask_bcrypt import Bcrypt 
 from utils.EmailServer import EmailServer
@@ -17,30 +17,34 @@ import json
 from flask_cors import cross_origin
 from decorators import pre_flight_cors
 from decorators import token_required
+import random
+from dotenv import load_dotenv
 
 from routes.doctorapis import doctor_bp
 from routes.patientapis import patient_bp
 from routes.paraApis import para_bp
 from routes.commonApis import comms_bp  
+
 app = create_app()
 bcrypt_var = Bcrypt(app) 
-
-# Configure Redis
+load_dotenv()
+# Get Redis configuration from environment variables
 redis_url = os.getenv('REDIS_URL', 'redis://redis:6379')
 redis_client = redis.from_url(redis_url)
 
+# Configure application session and security settings
 app.config.update(
     SESSION_TYPE='redis',
-    SESSION_REDIS=redis.from_url(redis_url),
+    SESSION_REDIS=redis_client,  # Use the already created client
     SESSION_KEY_PREFIX='session:',
-    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
-    SECRET_KEY='987qwert65fyhh',
-    SESSION_COOKIE_NAME='session_id',
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=int(os.getenv('SESSION_LIFETIME_HOURS', '1'))),
+    SECRET_KEY=os.getenv('SECRET_KEY', 'default_secret_key'),
+    SESSION_COOKIE_NAME=os.getenv('SESSION_COOKIE_NAME', 'session_id'),
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SECURE=False,  # Set to True in production with HTTPS
-    SESSION_COOKIE_SAMESITE='None',  # Changed from 'Lax' to 'None'
+    SESSION_COOKIE_SECURE=os.getenv('FLASK_ENV', 'development') == 'production',  # Auto-enable in production
+    SESSION_COOKIE_SAMESITE=os.getenv('SESSION_COOKIE_SAMESITE', 'Lax'),  # Configurable, default to safer option
     SESSION_COOKIE_PATH='/',
-    SESSION_COOKIE_DOMAIN=None,
+    SESSION_COOKIE_DOMAIN=os.getenv('SESSION_COOKIE_DOMAIN', None),
 )
 
 # Initialize Flask-Session
@@ -81,56 +85,145 @@ def send_verification():
     # Handle preflight request
     if request.method == "OPTIONS":
         return pre_flight_cors()
-        
+    
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({"error": "Invalid request format"}), 400
+            
         email = data.get('email')
-        is_password_change = data.get('isPasswordChange', False)  # New parameter
+        is_password_change = data.get('isPasswordChange', False)
+        is_forgot_password = data.get('isForgotPassword', False)
         
+        # Validate email presence
         if not email:
             return jsonify({"error": "Email is required"}), 400
             
-        # Check if email exists
+        # Check if email exists in the database
         existing_user = BaseUser.query.filter_by(primary_email=email).first()
         
-        # For registration, we want to prevent existing emails
-        # For password change, we want to ensure the email exists
-        if not is_password_change and existing_user:
-            return jsonify({"error": "Email already registered"}), 409
-        elif is_password_change and not existing_user:
-            return jsonify({"error": "Email not found"}), 404
-            
-        # Generate verification token
-        verification_token = secrets.token_hex(3)  # 6-digit hex code
+        # For forgot password flow, email must exist but we don't tell the user
+        if is_forgot_password:
+            if not existing_user:
+                # Return success even if email doesn't exist (security through obscurity)
+                return jsonify({
+                    "success": True,
+                    "message": "If your email is registered, a verification code has been sent"
+                }), 200
         
-        # Store verification data in Redis with expiration
-        verification_data = {
-            'email': email,
-            'token': verification_token,
-            'is_password_change': is_password_change,  # Store the purpose
-            'expires': (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat()
-        }
-        # Use email as key in Redis
-        redis_key = f"verification:{email}"
-        redis_client.setex(redis_key, timedelta(minutes=30), json.dumps(verification_data))
-
-        # Send verification email
-        if email_server.send_verification_email(email, verification_token):
-            return jsonify({
-                "success": True,
-                "message": "Verification code sent successfully",
-                "email": email
-            }), 200
+        # Generate verification token only if user exists
+        if is_forgot_password:
+            msg = "forgot_password"
+        elif is_password_change:
+            msg = "password_change"
         else:
-            return jsonify({"error": "Failed to send verification email"}), 500
+            msg = "new_user"
+        if existing_user:
+            # Generate numeric OTP
+            verification_token = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+            # Store verification data with proper expiration
+            expiration_minutes = 15
+            verification_data = {
+                'email': email,
+                'token': verification_token,
+                'purpose': msg,
+                'created_at': datetime.now(timezone.utc).isoformat(),
+                'expires_at': (datetime.now(timezone.utc) + timedelta(minutes=expiration_minutes)).isoformat(),
+                'attempts': 0
+            }
+            
+            # Use a unique key per verification request
+            token_id = secrets.token_hex(8)
+            redis_key = f"verification:{email}:{token_id}"
+            
+            # Store in Redis with expiration
+            redis_client.setex(
+                redis_key,
+                timedelta(minutes=expiration_minutes),
+                json.dumps(verification_data)
+            )
+            
+            # Store the latest token_id for this email
+            redis_client.set(f"latest_verification:{email}", token_id)
+            
+            # Send verification email
+            if email_server.send_verification_email(email, verification_token, 'forgot_password' if is_forgot_password else 'changepassword'):
+                return jsonify({
+                    "success": True,
+                    "message": "If your email is registered, a verification code has been sent"
+                }), 200
+            else:
+                # Log the error but don't expose it to the user
+                print(f"Failed to send verification email to {email}")
+                return jsonify({
+                    "success": True,
+                    "message": "If your email is registered, a verification code has been sent"
+                }), 200
+        
+        # Always return success for forgot password flow
+        elif not existing_user:
+            # Generate numeric OTP
+            verification_token = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+            # Store verification data with proper expiration
+            expiration_minutes = 15
+            verification_data = {
+                'email': email,
+                'token': verification_token,
+                'purpose': msg,
+                'created_at': datetime.now(timezone.utc).isoformat(),
+                'expires_at': (datetime.now(timezone.utc) + timedelta(minutes=expiration_minutes)).isoformat(),
+                'attempts': 0
+            }
+            
+            # Use a unique key per verification request
+            token_id = secrets.token_hex(8)
+            redis_key = f"verification:{email}:{token_id}"
+            
+            # Store in Redis with expiration
+            redis_client.setex(
+                redis_key,
+                timedelta(minutes=expiration_minutes),
+                json.dumps(verification_data)
+            )
+            
+            # Store the latest token_id for this email
+            redis_client.set(f"latest_verification:{email}", token_id)
+            
+            # Send verification email
+            if email_server.send_verification_email(email, verification_token,'new_user'):
+                return jsonify({
+                    "success": True,
+                    "message": "A verification code has been sent"
+                }), 200
+            else:
+                # Log the error but don't expose it to the user
+                print(f"Failed to send verification email to {email}")
+                return jsonify({
+                    "success": True,
+                    "message": "If your email is registered, a verification code has been sent"
+                }), 200
+
+        return jsonify({
+            "success": True,
+            "message": "If your email is registered, a verification code has been sent"
+        }), 200
             
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+        print(f"Error in send_verification: {str(e)}")  # Log the actual error
+        return jsonify({
+            "success": False,
+            "message": "An error occurred. Please try again later."
+        }), 500
 @app.route("/verify-email", methods=["POST"])
 def verify_email():
     try:    
         data = request.get_json()
+        if not data:
+            return jsonify({
+                "success": False,
+                "error": "Invalid request format"
+            }), 400
+
         email = data.get('email')
         code = data.get('code')
         
@@ -140,27 +233,55 @@ def verify_email():
                 "error": "Email and verification code are required"
             }), 400
             
-        # Get verification data from Redis
-        redis_key = f"verification:{email}"
+        # Get the latest token_id for this email
+        token_id = redis_client.get(f"latest_verification:{email}")
+        if not token_id:
+            return jsonify({
+                "success": False,
+                "error": "No verification in progress. Please request a new code."
+            }), 400
+
+        # Get verification data using email and token_id
+        redis_key = f"verification:{email}:{token_id.decode('utf-8')}"
         verification_data = redis_client.get(redis_key)
         
         if not verification_data:
             return jsonify({
                 "success": False,
-                "error": "No verification in progress. Please request a new code."
+                "error": "Verification code has expired. Please request a new code."
             }), 400
             
         verification = json.loads(verification_data)
         
-        
         # Check expiration
-        expiry_time = datetime.fromisoformat(verification['expires'].replace('Z', '+00:00'))
+        expiry_time = datetime.fromisoformat(verification['expires_at'])
         if datetime.now(timezone.utc) > expiry_time:
+            # Clean up expired data
             redis_client.delete(redis_key)
+            redis_client.delete(f"latest_verification:{email}")
             return jsonify({
                 "success": False,
                 "error": "Verification code has expired. Please request a new code."
             }), 400
+            
+        # Check attempts
+        max_attempts = 3
+        if verification['attempts'] >= max_attempts:
+            # Clean up after max attempts
+            redis_client.delete(redis_key)
+            redis_client.delete(f"latest_verification:{email}")
+            return jsonify({
+                "success": False,
+                "error": "Maximum verification attempts exceeded. Please request a new code."
+            }), 400
+
+        # Update attempts
+        verification['attempts'] += 1
+        redis_client.setex(
+            redis_key,
+            timedelta(minutes=15),  # Reset expiration time
+            json.dumps(verification)
+        )
             
         # Compare codes
         if verification['token'] != code:
@@ -169,22 +290,40 @@ def verify_email():
                 "error": "Invalid verification code. Please try again."
             }), 400
             
-        # Mark email as verified in Redis
-        redis_client.setex( f"verified:{email}", timedelta(minutes=30), "true")
+        # Get verification purpose
+        purpose = verification.get('purpose', 'email_verification')
+        
+        # Mark email as verified in Redis with purpose
+        verified_data = {
+            'email': email,
+            'purpose': purpose,
+            'verified_at': datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Store verification status with expiration
+        redis_client.setex(
+            f"verified:{email}:{purpose}",
+            timedelta(minutes=30),
+            json.dumps(verified_data)
+        )
+        
+        # Clean up verification data
+        redis_client.delete(redis_key)
+        redis_client.delete(f"latest_verification:{email}")
         
         return jsonify({
             "success": True,
             "message": "Email verified successfully",
-            "email": email
+            "email": email,
+            "purpose": purpose
         }), 200
         
     except Exception as e:
+        print(f"Error in verify_email: {str(e)}")  # Log the error
         return jsonify({
             "success": False,
-            "error": "Failed to verify email",
-            "details": str(e)
+            "error": "An error occurred. Please try again later."
         }), 500
-
 @app.route("/register", methods=["POST"])
 def register():
     if request.method == "POST":    
@@ -235,17 +374,52 @@ def register():
                 hashed_password = bcrypt_var.generate_password_hash(data['password']).decode('utf-8')
                 
                 # Create new user
-                new_user = BaseUser(
-                    first_name=data['first_name'],
-                    last_name=data['last_name'],
-                    primary_email=email,
-                    password_hash=hashed_password,
-                    role=data['role'],
-                    date_of_birth=date_of_birth,
-                    primary_contact=data['primary_contact'],
-                    aadhar_ssn=data['aadhar_ssn']
-                )
-                
+                if data['role']=='patient':
+                    new_user = Patient(
+                        first_name=data['first_name'],
+                        last_name=data['last_name'],
+                        primary_email=email,
+                        password_hash=hashed_password,
+                        role=data['role'],
+                        date_of_birth=date_of_birth,
+                        primary_contact=data['primary_contact'],
+                        aadhar_ssn=data['aadhar_ssn'],
+                        weight=data['weight'],
+                        medications=data['medical_history'],
+                        allergies=data['allergies']
+                    )
+                elif data['role']=='paramedic':
+                    new_user = Paramedic(
+                        first_name=data['first_name'],
+                        last_name=data['last_name'],
+                        primary_email=email,
+                        password_hash=hashed_password,
+                        role=data['role'],
+                        date_of_birth=date_of_birth,
+                        primary_contact=data['primary_contact'],
+                        aadhar_ssn=data['aadhar_ssn'],
+                        emt_certification_number=data['emt_license'],
+                        als_bls_training = data['als_bls_training'],
+                        years_experience=data['years_of_experience'],
+                        additional_certifications=data['additional_certifications'],
+                    )
+                elif data['role']=='doctor':
+                    new_user = Doctor(
+                            first_name=data['first_name'],
+                            last_name=data['last_name'],
+                            primary_email=email,
+                            password_hash=hashed_password,
+                            role=data['role'],
+                            date_of_birth=date_of_birth,
+                            primary_contact=data['primary_contact'],
+                            aadhar_ssn=data['aadhar_ssn'],
+                            medical_license=data['license_number'],
+                            specialty=data['specialization'],
+                            years_experience=float(data['years_of_experience']),
+                            organization=data['hospital_affiliation'],
+                        )
+                else:
+                    return jsonify({"message":"invalid role"}), 404
 
                 
                 db.session.add(new_user)
@@ -270,7 +444,7 @@ def register():
                 
             except Exception as db_error:
                 db.session.rollback()
-                
+                print(db_error)
                 return jsonify({"error": "Database error occurred"}), 500
 
         except Exception as e:
@@ -343,23 +517,71 @@ def logout():
     if request.method == "OPTIONS":
         return pre_flight_cors()
 
-    session.clear()
-    response = jsonify({"message": "Successfully logged out"})
-   
-    return response, 200
+    try:
+        # Get session ID from cookie
+        session_id = request.cookies.get('session_id')
+        
+        # Get user info before clearing session
+        user_id = session.get('user_id')
+        email = session.get('email')
+
+        # Clear Flask session
+        session.clear()
+
+        # Clear Redis session using session ID
+        if session_id:
+            redis_key = f"session:{session_id}"
+            redis_client.delete(redis_key)
+            print(f"Deleted Redis session key: {redis_key}")
+
+        # Clear all sessions for this user (optional, if you want to logout from all devices)
+        if user_id:
+            user_sessions_pattern = f"*{user_id}*"
+            for key in redis_client.scan_iter(match=user_sessions_pattern):
+                redis_client.delete(key)
+                print(f"Deleted additional Redis key: {key}")
+
+        # Clear any email verification data
+        if email:
+            redis_client.delete(f"verification:{email}")
+            redis_client.delete(f"verified:{email}")
+
+        # Prepare response
+        response = jsonify({
+            "status": "success",
+            "message": "Successfully logged out"
+        })
+
+        # Clear cookies
+        response.delete_cookie('session_id', path='/', domain=None)
+        response.delete_cookie('remember_token', path='/', domain=None)
+        
+        # Set CORS headers
+        response.headers.update({
+            'Access-Control-Allow-Origin': request.origin or 'http://127.0.0.1:3000',
+            'Access-Control-Allow-Credentials': 'true'
+        })
+
+        print("Logout successful")
+        return response, 200
+
+    except Exception as e:
+        print(f"Logout error: {str(e)}")
+        # Try to clear session even if there's an error
+        try:
+            session.clear()
+        except:
+            pass
+        
+        return jsonify({
+            "status": "error",
+            "message": "Error during logout"
+        }), 500
 
 @app.route("/check-session", methods=['GET', 'OPTIONS'])
 def check_session():
     if request.method == "OPTIONS":
-        response = jsonify({"success": True})
-        origin = request.headers.get('Origin')
-        if origin in ALLOWED_ORIGINS:
-            response.headers['Access-Control-Allow-Origin'] = origin
-            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Access-Control-Allow-Credentials'
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-            response.headers['Access-Control-Max-Age'] = '120'
-        return response, 200
+        return pre_flight_cors()
 
     try:
         # Check if user is logged in via session
@@ -413,54 +635,108 @@ def uploaded_file(filename):
         print(f"Error serving file: {str(e)}")
         return jsonify({"error": "File not found"}), 404
 
-@app.route("/password_change", methods = ['POST'])
-@token_required
+@app.route("/password_change", methods=['POST'])
 def password_change():
-    if request.method == "POST":    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Invalid request data"}), 400
+
+        # Extract required fields
+        email = data.get('email')
+        new_password = data.get('newPassword')
+        
+        # Validate required fields
+        if not email or not new_password:
+            return jsonify({
+                "error": "Missing required fields",
+                "details": "Email and new password are required"
+            }), 400
+
+        # Check if user exists
+        existing_user = BaseUser.query.filter_by(primary_email=email).first()
+        if not existing_user:
+            return jsonify({"error": "User not found"}), 404
+
+        # Check if email was verified for password change
+        verified_key = f"verified:{email}:forgot_password"
+        verification_data = redis_client.get(verified_key)
+        
+        if not verification_data:
+            return jsonify({
+                "error": "Email verification required",
+                "details": "Please verify your email before changing password"
+            }), 403
+
+        # Validate password requirements
+        if len(new_password) < 8:
+            return jsonify({
+                "error": "Invalid password",
+                "details": "Password must be at least 8 characters long"
+            }), 400
+
         try:
-            data = request.get_json()
-            if not data:
-                return jsonify({"error": "Invalid request data"}), 400
-            # Extract and validate all required fields
-            required_fields = [
-                'password',
-                'email'
-            ]
-            # Check for missing fields
-            missing_fields = [field for field in required_fields if not data.get(field)]
-            if missing_fields:
-                return jsonify({
-                    "error": "Missing required fields",
-                    "missing_fields": missing_fields
-                }), 400
-
-            email = data.get('email')
-            # Check if user exists
-            existing_user = BaseUser.query.filter_by(primary_email=email).first()
-            if not existing_user:
-                return jsonify({"error": "User not found"}), 404
-
-            try:
-                # Hash new password
-                hashed_password = bcrypt_var.generate_password_hash(data['password']).decode('utf-8')
-                
-                # Update user's password
-                existing_user.password_hash = hashed_password
-                db.session.commit()
-                
-                return jsonify({
-                    "success": True,
-                    "message": "Password updated successfully"
-                }), 200
-                    
-            except Exception as db_error:
-                db.session.rollback()
-                return jsonify({"error": "Database error occurred"}), 500
-
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
+            # Hash new password
+            hashed_password = bcrypt_var.generate_password_hash(new_password).decode('utf-8')
             
-    return jsonify({"error": "Method not allowed"}), 405
+            # Update user's password
+            existing_user.password_hash = hashed_password
+            db.session.commit()
+            
+            # Clear all verification and session data for security
+            redis_client.delete(verified_key)
+            redis_client.delete(f"verified:{email}:*")
+            
+            # Clear any active sessions for this user
+            user_sessions_pattern = f"session:*:{existing_user.id}:*"
+            for key in redis_client.scan_iter(match=user_sessions_pattern):
+                redis_client.delete(key)
+            
+            return jsonify({
+                "success": True,
+                "message": "Password updated successfully. Please login with your new password."
+            }), 200
+                
+        except Exception as db_error:
+            print(f"Database error in password_change: {str(db_error)}")
+            db.session.rollback()
+            return jsonify({
+                "error": "Failed to update password",
+                "details": "A database error occurred"
+            }), 500
+
+    except Exception as e:
+        print(f"Error in password_change: {str(e)}")
+        return jsonify({
+            "error": "An unexpected error occurred",
+            "details": "Please try again later"
+        }), 500
+
+
+
+
+
+
+
+def is_rate_limited(email):
+    """Check if the email is being rate limited for verification requests"""
+    rate_limit_key = f"rate_limit:verification:{email}"
+    count = redis_client.get(rate_limit_key)
+    
+    if count is None:
+        # First request in the window
+        redis_client.setex(rate_limit_key, 3600, 1)  # 1 hour window
+        return False
+        
+    count = int(count)
+    if count >= 5:  # Max 5 verification emails per hour
+        return True
+        
+    # Increment the counter
+    redis_client.incr(rate_limit_key)
+    return False
+
+
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000, debug=True)
