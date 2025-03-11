@@ -96,8 +96,8 @@ A comprehensive healthcare management system with role-based access for patients
 5. Implement notifications
 
 ### Medium Priority
-1. Add dark mode support
-2. Implement file upload system
+1. Add dark mode support [x]
+2. Implement file upload system [x]
 3. Add search functionality
 4. Create reporting system
 5. Add analytics dashboard
