@@ -1,11 +1,11 @@
 frontend/node_modules/*
 *.pyc
 LICENSE
-backedn/uploads/*
+backedn/uploads/profile_pics/*
 # Start Generation Here
 *.jpg
 *.jpeg
-*.png
+# *.png
 *.gif
 *.bmp
 *.tiff

@@ -35,6 +35,7 @@ def paraDashboard():
             return jsonify({"error": "Invalid token"}), 401
 
         para_data = {
+             "profile_pic": current_user.profile_pic if current_user.profile_pic else None,
             "first_name": current_user.first_name,
             "last_name":current_user.last_name,
             "email": current_user.primary_email,

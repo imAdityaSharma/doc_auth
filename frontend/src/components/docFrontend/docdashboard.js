@@ -53,8 +53,8 @@ const DocDashboard = () => {
                   upcomingAppointments: response.data.upcomingAppointments,
                   recentPrescriptions:response.data.recentPrescriptions,
                   dob:response.data.dob
-
                 });
+                
                 if (response.data.profile_pic) {
                   setPreviewUrl(response.data.profile_pic);
                 } else {

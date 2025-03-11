@@ -214,6 +214,7 @@ def send_verification():
             "success": False,
             "message": "An error occurred. Please try again later."
         }), 500
+
 @app.route("/verify-email", methods=["POST"])
 def verify_email():
     try:    
@@ -225,7 +226,7 @@ def verify_email():
             }), 400
 
         email = data.get('email')
-        code = data.get('code')
+        code = data.get('code').replace(" ", "")
         
         if not email or not code:
             return jsonify({
@@ -244,7 +245,7 @@ def verify_email():
         # Get verification data using email and token_id
         redis_key = f"verification:{email}:{token_id.decode('utf-8')}"
         verification_data = redis_client.get(redis_key)
-        
+        print(verification_data)
         if not verification_data:
             return jsonify({
                 "success": False,
@@ -357,7 +358,7 @@ def register():
             email = data.get('primary_email')
             
             # Check if email is verified using Redis
-            verified = redis_client.get(f"verified:{email}")
+            verified = redis_client.get(f"verified:{email}:new_user")
             if not verified:
                 return jsonify({"error": "Email not verified"}), 400
 
@@ -659,14 +660,17 @@ def password_change():
             return jsonify({"error": "User not found"}), 404
 
         # Check if email was verified for password change
-        verified_key = f"verified:{email}:forgot_password"
-        verification_data = redis_client.get(verified_key)
+        verified_key_forgot = f"verified:{email}:forgot_password"
+        verified_key_change = f"verified:{email}:password_change"
+        verification_data_forgot = redis_client.get(verified_key_forgot)
+        verification_data_change = redis_client.get(verified_key_change)
         
-        if not verification_data:
+        if not verification_data_forgot and not verification_data_change:
             return jsonify({
                 "error": "Email verification required",
                 "details": "Please verify your email before changing password"
             }), 403
+        
 
         # Validate password requirements
         if len(new_password) < 8:
@@ -684,7 +688,7 @@ def password_change():
             db.session.commit()
             
             # Clear all verification and session data for security
-            redis_client.delete(verified_key)
+            redis_client.delete(verified_key_forgot or verified_key_change  )
             redis_client.delete(f"verified:{email}:*")
             
             # Clear any active sessions for this user

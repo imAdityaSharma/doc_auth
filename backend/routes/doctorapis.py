@@ -43,7 +43,8 @@ def docDashboard():
             "primary_contact":current_user.primary_contact,
             "dob":current_user.date_of_birth,
             "upcomingAppointments": [],  # Query appointments table
-            "recentPrescriptions": []    # Query prescriptions table
+            "recentPrescriptions": [] ,
+             "profile_pic": current_user.profile_pic if current_user.profile_pic else None, # Query prescriptions table
         }
         
         response = jsonify(doc_data)

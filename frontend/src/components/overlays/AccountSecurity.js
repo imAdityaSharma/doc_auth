@@ -33,7 +33,7 @@ const AccountSecurity = ({ onClose }) => {
             const response = await axios.post('http://localhost:5000/send-verification', 
                 { 
                     email:email,
-                    isForgotPassword: true  // Add this flag
+                    isPasswordChange: true  // Add this flag
                 },
                 {
                     withCredentials: true,
