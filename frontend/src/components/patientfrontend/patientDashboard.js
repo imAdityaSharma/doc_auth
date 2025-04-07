@@ -7,7 +7,7 @@ import UpdateProfile from '../overlays/UpdateProfile';
 import SecureImage from '../common/SecureImage'; 
 import AccountSecurity from '../overlays/AccountSecurity';
 import UpdateHealthMetrics from '../overlays/UpdateHealthMetrics';
-import { FaEdit } from 'react-icons/fa';
+import { FaEdit, FaComment, FaSearch, FaAngleDown, FaAngleUp, FaTimes } from 'react-icons/fa';
 
 export default function PatientDashboard() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -16,6 +16,7 @@ export default function PatientDashboard() {
   const [showAccountSecurity, setAccountSecurity] = useState(false);
   const [showHealthMetricsModal, setShowHealthMetricsModal] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('/default-profile.png');
+  const [showMessagesBox, setShowMessagesBox] = useState(false);
   const navigate = useNavigate();
   const [patientData, setPatientData] = useState({
     name: "",
@@ -25,7 +26,12 @@ export default function PatientDashboard() {
     recentPrescriptions: [],
     bloodPressure: '120/80',
     heartRate: '72 bpm',
-    weight: '70 kg'
+    weight: '70 kg',
+    messages: [
+      { id: 1, sender: 'Dr. Smith', content: 'Your test results look good!', time: '2 hours ago', unread: true },
+      { id: 2, sender: 'Dr. Johnson', content: 'Please remember to take your medication as prescribed.', time: 'Yesterday', unread: false },
+      { id: 3, sender: 'Nurse Wilson', content: 'Your appointment has been confirmed for next Monday.', time: '2 days ago', unread: false },
+    ]
   });
 
   React.useEffect(() => {
@@ -47,7 +53,8 @@ export default function PatientDashboard() {
 
         setPatientData({
           ...response.data,
-          profile_pic: response.data.profile_pic ? `http://127.0.0.1:5000${response.data.profile_pic}` : '/default-profile.png'
+          profile_pic: response.data.profile_pic ? `http://127.0.0.1:5000${response.data.profile_pic}` : '/default-profile.png',
+          messages: response.data.messages || patientData.messages // Keep default messages if none in API
         });
         if (response.data.profile_pic) {
           setPreviewUrl(response.data.profile_pic);
@@ -107,6 +114,18 @@ export default function PatientDashboard() {
     }
   };
 
+  const toggleMessagesBox = () => {
+    setShowMessagesBox(!showMessagesBox);
+  };
+
+  const navigateToFindDoctors = () => {
+    navigate('/find-doctors');
+  };
+
+  const getUnreadCount = () => {
+    return patientData.messages.filter(msg => msg.unread).length;
+  };
+
   return (
     <div className="dashboard-container">
       {/* Header */}
@@ -115,6 +134,15 @@ export default function PatientDashboard() {
           <h1>Patient Dashboard</h1>
         </div>
         <div className="header-right">
+          <div className="navigation-icons">
+            <button 
+              className="nav-button"
+              onClick={navigateToFindDoctors}
+              title="Find Doctors"
+            >
+              <FaSearch /> Find Doctors
+            </button>
+          </div>
           <div className="profile-section">
             <button 
               className="profile-button1"
@@ -128,7 +156,7 @@ export default function PatientDashboard() {
                   height: '80px', 
                   borderRadius: '50%', 
                   objectFit: 'cover',
-                  border: '2px solid #fff'  // Optional: adds a white border around the image
+                  border: '2px solid #fff'
                 }}
               />
             </button>
@@ -143,6 +171,18 @@ export default function PatientDashboard() {
           </div>
         </div>
       </header>
+
+      {/* Navigation Bar */}
+      <nav className="dashboard-nav">
+        <ul>
+          <li className="active"><a href="#">Dashboard</a></li>
+          <li><a onClick={() => navigate('/appointments')}>Appointments</a></li>
+          <li><a onClick={() => navigate('/prescriptions')}>Prescriptions</a></li>
+          <li><a onClick={() => navigate('/medical-records')}>Medical Records</a></li>
+          <li><a onClick={() => navigate('/find-doctors')}>Find Doctors</a></li>
+          <li><a onClick={() => navigate('/messages')}>Messages</a></li>
+        </ul>
+      </nav>
 
       {/* Main Content */}
       <main className="dashboard-content">
@@ -179,15 +219,22 @@ export default function PatientDashboard() {
           <div className="dashboard-card">
             <h3>Upcoming Appointments</h3>
             <div className="appointments-list">
-              {patientData.upcomingAppointments.map(apt => (
-                <div key={apt.id} className="appointment-item">
-                  <div className="appointment-date">{apt.date}</div>
-                  <div className="appointment-details">
-                    <p>{apt.doctor}</p>
-                    <p>{apt.type}</p>
+              {patientData.upcomingAppointments && patientData.upcomingAppointments.length > 0 ? (
+                patientData.upcomingAppointments.map(apt => (
+                  <div key={apt.id} className="appointment-item">
+                    <div className="appointment-date">{apt.date}</div>
+                    <div className="appointment-details">
+                      <p>{apt.doctor}</p>
+                      <p>{apt.type}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p>No upcoming appointments</p>
+              )}
+              <button className="action-button" onClick={() => navigate('/appointments')}>
+                Schedule Appointment
+              </button>
             </div>
           </div>
 
@@ -195,13 +242,20 @@ export default function PatientDashboard() {
           <div className="dashboard-card">
             <h3>Current Prescriptions</h3>
             <div className="prescriptions-list">
-              {patientData.recentPrescriptions.map(prescription => (
-                <div key={prescription.id} className="prescription-item">
-                  <h4>{prescription.medicine}</h4>
-                  <p>Dosage: {prescription.dosage}</p>
-                  <p>Frequency: {prescription.frequency}</p>
-                </div>
-              ))}
+              {patientData.recentPrescriptions && patientData.recentPrescriptions.length > 0 ? (
+                patientData.recentPrescriptions.map(prescription => (
+                  <div key={prescription.id} className="prescription-item">
+                    <h4>{prescription.medicine}</h4>
+                    <p>Dosage: {prescription.dosage}</p>
+                    <p>Frequency: {prescription.frequency}</p>
+                  </div>
+                ))
+              ) : (
+                <p>No current prescriptions</p>
+              )}
+              <button className="action-button" onClick={() => navigate('/prescriptions')}>
+                View All Prescriptions
+              </button>
             </div>
           </div>
         </div>
@@ -211,6 +265,41 @@ export default function PatientDashboard() {
       <footer className="dashboard-footer">
         <p>&copy; 2024 Healthcare Portal. All rights reserved.</p>
       </footer>
+
+      {/* Fixed Messages Component */}
+      <div className="fixed-chat-container">
+        <div className="chat-launcher" onClick={toggleMessagesBox}>
+          <FaComment />
+          {getUnreadCount() > 0 && <span className="chat-notification-badge">{getUnreadCount()}</span>}
+        </div>
+        
+        {showMessagesBox && (
+          <div className="chat-box">
+            <div className="chat-header">
+              <h3>Messages</h3>
+              <button onClick={toggleMessagesBox} className="chat-close-button">
+                <FaTimes />
+              </button>
+            </div>
+            <div className="chat-messages">
+              {patientData.messages.length > 0 ? (
+                patientData.messages.map(message => (
+                  <div key={message.id} className={`chat-message-item ${message.unread ? 'unread' : ''}`}>
+                    <div className="chat-message-sender">{message.sender}</div>
+                    <div className="chat-message-content">{message.content}</div>
+                    <div className="chat-message-time">{message.time}</div>
+                  </div>
+                ))
+              ) : (
+                <p className="no-messages">No messages</p>
+              )}
+            </div>
+            <div className="chat-footer">
+              <button onClick={() => navigate('/messages')}>View All Messages</button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Settings Modal */}
       {showSettings && (

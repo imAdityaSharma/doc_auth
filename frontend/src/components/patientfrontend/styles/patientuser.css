@@ -1,142 +1,367 @@
-
-    .dashboard-container {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      background-color: var(--bg-primary);
-      color: var(--text-primary);
-    }
-
-    .dashboard-header {
-      background: var(--bg-secondary);
-      box-shadow: var(--header-shadow);
-      padding: 1rem 2rem;
-      
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .profile-section {
-      position: relative;
-    }
-
-    .profile-button1 {
-    
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      background-color: var(--profile-bg);
-      border-color: var(--profile-bg);
-      border: none;
-      padding: 0;
-      cursor: pointer;
-      position: relative;
-      transition: transform 0.2s;
-    }
-    
-    .profile-button:hover {
-      transform: scale(1.2);
-    }
-    
-    .profile-button:focus {
-      outline: none;
-    }
-    
-    .profile-section {
-      position: relative;
-    }
-    
-    .profile-menu {
-      position: absolute;
-      right: 0;
-      top: 100%;
-      background: var(--bg-secondary);
-      box-shadow: var(--modal-shadow);
-      border-radius: 8px;
-      padding: 8px 0;
-      margin-top: 8px;
-      min-width: 150px;
-      z-index: 1000;
-    }
-    
-    .profile-menu button {
-      display: block;
-      width: 100%;
-      padding: 8px 16px;
-      text-align: left;
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 14px;
-      color: var(--text-primary);
-      transition: background-color 0.2s;
-    }
-    
-    .profile-menu button:hover {
-      background-color: var(--menu-hover);
-    }
-
-    .dashboard-content {
-      flex: 1;
-      padding: 2rem;
-      background: var(--bg-primary);
-    }
-
-    .welcome-section {
-      margin-bottom: 2rem;
-    }
-
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2rem;
-    }
-
-    .dashboard-card {
-      background: var(--bg-secondary);
-      box-shadow: var(--card-shadow);
-      border-radius: 8px;
-      padding: 1.5rem;
-    }
-
-    .appointment-item, .prescription-item {
-      border-bottom: 1px solid #eee;
-      padding: 1rem 0;
-    }
-
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 1rem;
-    }
-
-    .metric-item {
-      text-align: center;
-      padding: 1rem;
-      background: var(--metric-bg);
-      border-radius: 4px;
-    }
-
-    .metric-label {
-      display: block;
-      color: var(--text-secondary);
-      margin-bottom: 0.5rem;
-    }
-
-    .metric-value {
-      font-size: 1.25rem;
-      font-weight: bold;
-      color: var(--text-primary);
-    }
-
-    .dashboard-footer {
-      background: #333;
-      color: white;
-      text-align: center;
-      padding: 1rem;
-      margin-top: auto;
-    }
+.dashboard-container {
+  min-height: 100vh;
+ display: flex;
+ flex-direction: column;
+ background-color: var(--bg-primary);
+ color: var(--text-primary);
+  }
+ .dashboard-header {
+ background: var(--bg-secondary);
+ box-shadow: var(--header-shadow);
+ padding: 1rem 2rem;
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+  }
+ .profile-section {
+ position: relative;
+  }
+ .profile-button1 {
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ width: 80px;
+ height: 80px;
+ border-radius: 50%;
+ background-color: var(--profile-bg);
+ border-color: var(--profile-bg);
+ border: none;
+ padding: 0;
+ cursor: pointer;
+ position: relative;
+ transition: transform 0.2s;
+  }
+ .profile-button:hover {
+ transform: scale(1.2);
+  }
+ .profile-button:focus {
+ outline: none;
+  }
+ .profile-section {
+ position: relative;
+  }
+ .profile-menu {
+ position: absolute;
+ right: 0;
+ top: 100%;
+ background: var(--bg-secondary);
+ box-shadow: var(--modal-shadow);
+ border-radius: 8px;
+ padding: 8px 0;
+ margin-top: 8px;
+ min-width: 150px;
+ z-index: 1000;
+  }
+ .profile-menu button {
+ display: block;
+ width: 100%;
+ padding: 8px 16px;
+ text-align: left;
+ background: none;
+ border: none;
+ cursor: pointer;
+ font-size: 14px;
+ color: var(--text-primary);
+ transition: background-color 0.2s;
+  }
+ .profile-menu button:hover {
+ background-color: var(--menu-hover);
+  }
+ .dashboard-content {
+ flex: 1;
+ padding: 2rem;
+ background: var(--bg-primary);
+  }
+ .welcome-section {
+ margin-bottom: 2rem;
+  }
+ .dashboard-grid {
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+ gap: 2rem;
+  }
+ .dashboard-card {
+ background: var(--bg-secondary);
+ box-shadow: var(--card-shadow);
+ border-radius: 8px;
+ padding: 1.5rem;
+  }
+ .appointment-item, .prescription-item {
+ border-bottom: 1px solid #eee;
+ padding: 1rem 0;
+  }
+ .metrics-grid {
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+ gap: 1rem;
+  }
+ .metric-item {
+ text-align: center;
+ padding: 1rem;
+ background: var(--metric-bg);
+ border-radius: 4px;
+  }
+ .metric-label {
+ display: block;
+ color: var(--text-secondary);
+ margin-bottom: 0.5rem;
+  }
+ .metric-value {
+ font-size: 1.25rem;
+ font-weight: bold;
+ color: var(--text-primary);
+  }
+ .dashboard-footer {
+ background: #333;
+ color: white;
+ text-align: center;
+ padding: 1rem;
+ margin-top: auto;
+  }
+ 
+ /* NEW CSS - Navigation styles */
+ .dashboard-nav {
+   background-color: #f5f8fa;
+   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+ }
+ 
+ .dashboard-nav ul {
+   display: flex;
+   list-style: none;
+   margin: 0;
+   padding: 0;
+ }
+ 
+ .dashboard-nav li {
+   margin: 0;
+ }
+ 
+ .dashboard-nav a {
+   display: block;
+   padding: 15px 20px;
+   text-decoration: none;
+   color: #506690;
+   font-weight: 500;
+   transition: all 0.3s ease;
+   cursor: pointer;
+ }
+ 
+ .dashboard-nav a:hover {
+   color: #3755BE;
+   background-color: rgba(55, 85, 190, 0.05);
+ }
+ 
+ .dashboard-nav li.active a {
+   color: #3755BE;
+   border-bottom: 3px solid #3755BE;
+ }
+ 
+ /* NEW CSS - Header Navigation Icons */
+ .header-right {
+   display: flex;
+   align-items: center;
+ }
+ 
+ .navigation-icons {
+   display: flex;
+   align-items: center;
+   margin-right: 20px;
+ }
+ 
+ .nav-button {
+   background: none;
+   border: none;
+   color: #506690;
+   font-size: 16px;
+   display: flex;
+   align-items: center;
+   padding: 8px 15px;
+   border-radius: 4px;
+   margin-right: 10px;
+   cursor: pointer;
+   transition: all 0.2s ease;
+ }
+ 
+ .nav-button:hover {
+   background-color: rgba(55, 85, 190, 0.1);
+   color: #3755BE;
+ }
+ 
+ .nav-button svg {
+   margin-right: 5px;
+ }
+ 
+ /* NEW CSS - Facebook-style Fixed Bottom Messages */
+ .fixed-chat-container {
+   position: fixed;
+   bottom: 20px;
+   right: 20px;
+   z-index: 1000;
+ }
+ 
+ .chat-launcher {
+   width: 60px;
+   height: 60px;
+   border-radius: 50%;
+   background-color: #3755BE;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   color: white;
+   font-size: 24px;
+   cursor: pointer;
+   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+   position: relative;
+   transition: all 0.2s ease;
+ }
+ 
+ .chat-launcher:hover {
+   background-color: #2a4190;
+   transform: scale(1.05);
+ }
+ 
+ .chat-notification-badge {
+   position: absolute;
+   top: -5px;
+   right: -5px;
+   background-color: #f44336;
+   color: white;
+   font-size: 12px;
+   min-width: 20px;
+   height: 20px;
+   border-radius: 10px;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   padding: 0 6px;
+ }
+ 
+ .chat-box {
+   position: absolute;
+   bottom: 75px;
+   right: 0;
+   width: 320px;
+   height: 400px;
+   background-color: white;
+   border-radius: 8px;
+   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+   display: flex;
+   flex-direction: column;
+   overflow: hidden;
+ }
+ 
+ .chat-header {
+   display: flex;
+   justify-content: space-between;
+   align-items: center;
+   padding: 12px 15px;
+   border-bottom: 1px solid #eaedf2;
+   background-color: #3755BE;
+   color: white;
+ }
+ 
+ .chat-header h3 {
+   margin: 0;
+   font-size: 16px;
+ }
+ 
+ .chat-close-button {
+   background: none;
+   border: none;
+   color: white;
+   cursor: pointer;
+   padding: 5px;
+   font-size: 16px;
+ }
+ 
+ .chat-messages {
+   flex: 1;
+   overflow-y: auto;
+   padding: 0;
+ }
+ 
+ .chat-message-item {
+   padding: 12px 15px;
+   border-bottom: 1px solid #eaedf2;
+   cursor: pointer;
+   transition: background-color 0.2s;
+ }
+ 
+ .chat-message-item:hover {
+   background-color: #f5f8fa;
+ }
+ 
+ .chat-message-item.unread {
+   background-color: rgba(55, 85, 190, 0.05);
+ }
+ 
+ .chat-message-item.unread .chat-message-sender {
+   font-weight: 600;
+ }
+ 
+ .chat-message-sender {
+   font-size: 14px;
+   font-weight: 500;
+   color: #344767;
+   margin-bottom: 3px;
+ }
+ 
+ .chat-message-content {
+   font-size: 13px;
+   color: #506690;
+   margin-bottom: 5px;
+   white-space: nowrap;
+   overflow: hidden;
+   text-overflow: ellipsis;
+ }
+ 
+ .chat-message-time {
+   font-size: 11px;
+   color: #8c9db5;
+ }
+ 
+ .chat-footer {
+   padding: 10px;
+   text-align: center;
+   border-top: 1px solid #eaedf2;
+   background-color: #f8f9fa;
+ }
+ 
+ .chat-footer button {
+   background: none;
+   border: none;
+   color: #3755BE;
+   font-size: 14px;
+   font-weight: 500;
+   cursor: pointer;
+   padding: 5px 10px;
+ }
+ 
+ .chat-footer button:hover {
+   text-decoration: underline;
+ }
+ 
+ .no-messages {
+   padding: 20px;
+   text-align: center;
+   color: #8c9db5;
+ }
+ 
+ /* NEW CSS - Action buttons for cards */
+ .action-button {
+   display: block;
+   width: 100%;
+   padding: 10px;
+   margin-top: 15px;
+   background-color: #3755BE;
+   color: white;
+   border: none;
+   border-radius: 4px;
+   font-weight: 500;
+   cursor: pointer;
+   transition: background-color 0.2s;
+ }
+ 
+ .action-button:hover {
+   background-color: #2a4190;
+ }

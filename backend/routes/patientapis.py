@@ -217,3 +217,75 @@ def health_metrics():
             print(f"Health metrics update error: {str(e)}")
             db.session.rollback()
             return jsonify({"error": str(e)}), 500
+
+
+
+@patient_bp.route('/getDoclist', methods=['GET', 'POST'])
+def getDocList():
+    try:
+        if request.method == 'POST':
+            # Get and validate authentication token
+            auth_header = request.headers.get('Authorization')
+            if not auth_header:
+                return jsonify({"error": "Authorization header missing"}), 401
+                
+            token = auth_header.split(" ")[1]
+            data = jwt.decode(token, str(current_app.config['SECRET_KEY']), algorithms=["HS256"])
+            
+            # Get user with the correct model based on role
+            user_role = data.get('role', '')
+            user_id = data.get('user_id')
+            
+            if user_role == 'patient':
+                current_user = Patient.query.get(user_id)
+            else:
+                return jsonify({"error": "Only patients can access this endpoint"}), 403
+                
+            if not current_user:
+                return jsonify({"error": "User not found"}), 404
+                
+            # Get user's location data
+            city = current_user.city
+            state = current_user.state
+            
+            # Query doctors based on location
+            query = Doctor.query
+            
+            # Filter by location if available
+            if city:
+                query = query.filter_by(city=city)
+            if state:
+                query = query.filter_by(state=state)
+                
+            # Execute query and get results
+            doctors = query.all()
+            
+            # Format doctor data for response
+            doctors_list = []
+            for doctor in doctors:
+                doctors_list.append({
+                    "id": doctor.id,
+                    "name": f"{doctor.first_name} {doctor.last_name}",
+                    "specialty": doctor.specialty,
+                    "years_experience": doctor.years_experience,
+                    "organization": doctor.organization,
+                    "city": doctor.city,
+                    "state": doctor.state
+                })
+                
+            return jsonify({
+                "success": True,
+                "doctors": doctors_list,
+                "count": len(doctors_list)
+            }), 200
+                
+        else:  # GET request
+            return jsonify({"error": "POST method required with authentication"}), 400
+            
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token has expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+    except Exception as e:
+        print(f"Error processing request: {str(e)}")
+        return jsonify({"error": "An unexpected error occurred"}), 500
